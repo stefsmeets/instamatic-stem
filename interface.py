@@ -30,16 +30,45 @@ class BeamCtrlFrame(object, LabelFrame):
         for i, channel in enumerate(self.channels):
             self.make_slider(frame, channel["var"], channel["name"], 10+i, self.update_channels, -100, 100)
 
-        Separator(frame, orient=HORIZONTAL).grid(row=100, columnspan=3, sticky="ew", pady=10)
+        Separator(frame, orient=HORIZONTAL).grid(row=100, columnspan=4, sticky="ew", pady=10)
 
         self.make_slider(frame, self.var_damping, "Damping factor", 101, self.update_channels, 0, 100)
+
+        Separator(frame, orient=HORIZONTAL).grid(row=199, columnspan=4, sticky="ew", pady=10)
 
         frame.pack(side="top", fill="x", padx=10, pady=10)
         frame.columnconfigure(2, weight=1)
 
+        frame = Frame(self)
+
+        # duration
+        Label(frame, text="Duration").grid(row=200, column=0, sticky="EW")
+        e = Spinbox(frame, width=10, textvariable=self.var_scan_duration, from_=0.1, to=10.0, increment=0.1)
+        e.grid(row=200, column=1, sticky="EW", padx=5)
+    
+        # slices
+        Label(frame, text="Slices").grid(row=200, column=2, sticky="EW")
+        e = Spinbox(frame, width=10, textvariable=self.var_scan_slices, from_=1, to=100)
+        e.grid(row=200, column=3, sticky="EW", padx=5)
+
+        self.bo = Button(frame, text="Set origin (0, 0)", command=self.set_scan_origin)
+        self.bo.grid(row=201, column=0, sticky="EW")
+
+        self.bx = Button(frame, text="Set X-axis (0, x)", command=self.set_scan_x_axis)
+        self.bx.grid(row=201, column=1, sticky="EW")
+
+        self.by = Button(frame, text="Set Y-axis (y, 0)", command=self.set_scan_y_axis)
+        self.by.grid(row=201, column=2, sticky="EW")
+
+        self.bgo = Button(frame, text="Scan!", command=self.do_scan)
+        self.bgo.grid(row=201, column=3, sticky="EW")
+
+        frame.pack(side="top", fill="x", padx=10, pady=10)
+
+
     def make_slider(self, frame, var, label, row, command, minval, maxval):
          Label(frame, text=label, width=20).grid(row=row, column=0, sticky="W")
-         e = Spinbox(frame, width=10, textvariable=var, from_=minval, to=maxval)
+         e = Spinbox(frame, width=10, textvariable=var, from_=minval, to=maxval, increment=0.1)
          e.grid(row=row, column=1, sticky="W", padx=5)
     
          slider = Scale(frame, variable=var, from_=minval, to=maxval, orient=HORIZONTAL, command=command)
@@ -47,13 +76,18 @@ class BeamCtrlFrame(object, LabelFrame):
 
     def init_vars(self):
         for channel in self.channels:
-            channel["var"] = IntVar(value=channel["default"])
+            channel["var"] = DoubleVar(value=channel["default"])
             channel["var"].trace("w", self.update_channels)
 
-        self.var_damping = IntVar(value=100)
+        self.var_damping = DoubleVar(value=100)
         self.var_damping.trace("w", self.update_channels)
 
+        self.var_scan_slices = IntVar(value=20)
+        self.var_scan_duration = DoubleVar(value=1.0)
+
         self.var_toggle_beam = BooleanVar(value=False)
+
+        self.scan_variables = {"origin": None, "x_axis": None, "y_axis": None}
 
     def reset_channels(self):
         for channel in self.channels:
@@ -89,6 +123,38 @@ class BeamCtrlFrame(object, LabelFrame):
             channel_data.append(damping*val / 100.0)
 
         return channel_data
+
+    def set_scan_origin(self):
+        self.scan_variables["origin"] = np.array(self.get_channel_data())
+        for key, value in self.scan_variables.items():
+            print key, value
+        print
+
+    def set_scan_x_axis(self):
+        self.scan_variables["x_axis"] = np.array(self.get_channel_data())
+        for key, value in self.scan_variables.items():
+            print key, value
+        print
+
+    def set_scan_y_axis(self):
+        self.scan_variables["y_axis"] = np.array(self.get_channel_data())
+        for key, value in self.scan_variables.items():
+            print key, value
+        print
+
+    def do_scan(self):
+        assert self.scan_variables["origin"] is not None, "Missing origin!"
+        assert self.scan_variables["x_axis"] is not None, "Missing x_axis!"
+        assert self.scan_variables["y_axis"] is not None, "Missing y_axis!"
+        duration = self.var_scan_duration.get()
+        slices = self.var_scan_slices.get()
+
+        self.var_toggle_beam.set(False)
+        self.beam_ctrl.do_scan(self.scan_variables["origin"],
+                               self.scan_variables["x_axis"],
+                               self.scan_variables["y_axis"],
+                               duration,
+                               slices)
 
 
 settings_fireface = {
@@ -128,7 +194,6 @@ class App(threading.Thread):
     """docstring for App"""
     def __init__(self, settings):
         super(App, self).__init__()
-        #BeamCtrlFrame(root, settings=settings_testing).pack(side="top", fill="both", expand=True)
         self.settings = settings
         self.beam_ctrl = BeamCtrl(**settings)
 
@@ -142,39 +207,46 @@ class App(threading.Thread):
     def close(self):
         self.root.quit()
 
-if __name__ == '__main__':
-    app = App(settings=settings_testing)
 
-    embed(banner1="")
+def run_gui(settings, beam_ctrl):
+    root = Tk()
+    BeamCtrlFrame(root, settings=settings, beam_ctrl=beam_ctrl).pack(side="top", fill="both", expand=True)
+    root.mainloop()
 
-    beam = app.beam_ctrl
 
-    # origin (0, 0)
-    raw_input("\n\nPress enter at top left -> origin (0, 0)")
-    o = np.array(beam.channel_data)
+def do_scan_lab6(beam):
+    damp = 0.5
+    origin   = np.array([ 17,  35], dtype=np.float) * damp * 0.01
+    botleft  = np.array([-40,  26], dtype=np.float) * damp * 0.01
+    topright = np.array([ 31, -21], dtype=np.float) * damp * 0.01
     
-    # topright (x, 0)
-    raw_input("\n\nPress enter at top right -> topright (x, 0)")
-    x = np.array(beam.channel_data) - o
+    beam.do_scan(origin, botleft, topright, duration=1.0, slices=20)
 
-    # botleft (0, y)
-    raw_input("\n\nPress enter at bottom left -> botleft (0, y)")
-    y = np.array(beam.channel_data) - o
 
-    print
-    print
-    print o
-    print x
-    print y
+if __name__ == '__main__':
+    settings = settings_testing
+    # settings = settings_fireface
 
-    print
-    for i in range(10):
-        for j in range(10):
-            coord = o + i*x + j*y
-            print "{}: {} -> {}".format(i,j, coord)
+    beam = BeamCtrl(**settings)
 
-            beam.update(coord)
-            time.sleep(0.1)
 
-    app.close()
+
+    run_gui(settings, beam)
+
+
+
+    # do_scan_lab6(beam)
+
+
+
+    # run_gui(settings, beam)
+    
+
+
+    # app = App(settings=settings)
+    # beam = app.beam_ctrl
+
+    # embed(banner1="")
+
+    # app.close()
 

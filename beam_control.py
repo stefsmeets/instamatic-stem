@@ -1,6 +1,7 @@
 import sounddevice as sd
 import numpy as np
 from math import ceil
+import time
 
 
 class BeamCtrl(object):
@@ -58,7 +59,7 @@ class BeamCtrl(object):
         self.channel_data = channel_data
         self.signal = self.get_signal(channel_data)
 
-        # print "signal updated"
+        # print "signal updated", time.clock()
 
     def start_stream(self):
         print "start stream"
@@ -67,3 +68,40 @@ class BeamCtrl(object):
     def stop_stream(self):
         print "stop stream"
         sd.stop()
+
+    def do_scan(self, o, x, y, duration=1.0, slices=20):
+        fs = self.fs
+        mapping = self.mapping
+        ramps = []
+        
+        for i in range(slices):
+            start = o + (x-o)*i/float(slices)
+            end = start + (y-o)
+            arr = ramp(start, end, fs, duration)
+            ramps.append(arr)
+
+        ramps = np.vstack(ramps)
+
+        print ramps.shape
+        sd.play(ramps, fs, mapping=mapping, blocking=False)
+        print "Scanning started!"
+
+
+def ramp(start, end, fs, duration):
+    """
+    start: (1, n_channels) vector
+    end:   (1, n_channels) vector
+    fs: frequency
+    duration: time in s
+    """
+
+    n_channels = start.size
+    n_samples = ceil(fs*duration)
+    length = ceil(n_samples*n_channels)
+    signal = np.empty(int(length), dtype=np.float32).reshape(-1, n_channels)
+
+    for channel in range(n_channels):
+        signal.reshape(-1)[channel::n_channels] = np.linspace(start[channel], end[channel], n_samples)
+
+    return signal
+
