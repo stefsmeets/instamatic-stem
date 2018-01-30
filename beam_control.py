@@ -1,7 +1,10 @@
-import sounddevice as sd
+import sounddev as sd
 import numpy as np
 from math import ceil
 import time
+
+import high_precision_timers
+high_precision_timers.enable()
 
 
 class BeamCtrl(object):
@@ -13,25 +16,34 @@ class BeamCtrl(object):
         global_volume=1.0,    # range [0.0, 1.0]
         n_channels=2,         # number of channels
         mapping=(1,2),        # mapping of the channels
-        chunksize=1024,       # number of sampling points per channel
+        blocksize=1024,       # number of frames per channel
         **kwargs
         ): 
         super(BeamCtrl, self).__init__()
         
         sd.default.device  = device
+        sd.default.latency = 'low'
 
         self.fs            = fs           
         self.duration      = duration     
         self.global_volume = global_volume
         self.n_channels    = n_channels   
         self.mapping       = mapping
-        self.chunksize     = chunksize    
  
-        length             = ceil(fs*duration*n_channels)
-        self.signal_data   = np.empty(int(length), dtype=np.float32).reshape(-1, n_channels)
+        blocksize          = int(ceil(fs*duration))
+        self.blocksize     = blocksize    
+
+        self.signal_data   = np.empty((blocksize, n_channels), dtype=np.float32)
         self.x             = np.arange(fs*duration) / float(fs)  # x-axis
 
         self.channel_data   = None
+
+    def set_duration(self, duration):
+        self.duration      = duration     
+        blocksize          = int(ceil(fs*duration))
+        self.blocksize     = blocksize    
+        self.signal_data   = np.empty((blocksize, n_channels), dtype=np.float32)
+        self.x             = np.arange(self.fs*duration) / float(self.fs)  # x-axis
 
     def get_signal(self, channel_data):
         n_channels = self.n_channels
@@ -60,6 +72,10 @@ class BeamCtrl(object):
         self.signal = self.get_signal(channel_data)
 
         # print "signal updated", time.clock()
+
+    def play(self, channel_data, loop=False, blocking=False):
+        self.signal = self.get_signal(channel_data)
+        sd.play(self.signal_data, self.fs, mapping=self.mapping, loop=loop, blocking=blocking)
 
     def start_stream(self):
         print "start stream"
