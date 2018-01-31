@@ -48,9 +48,10 @@ def do_experiment(cam, strength,
         deq.append(streamtime.outputBufferDacTime)
 
         try:
-            data = q.get_nowait()
-        except Queue.Empty:
-            # print 'Buffer is empty: increase buffersize?'
+            coord = gen_coords.next()
+            data.reshape(-1)[0::channels] = coord[0]
+            data.reshape(-1)[1::channels] = coord[1]
+        except StopIteration:
             raise sd.CallbackAbort
 
         if len(data) < len(outdata):
@@ -101,12 +102,7 @@ def do_experiment(cam, strength,
 
     coords = np.dot(coords, r)
 
-    for coord in coords:
-        # print q.qsize(), coord, i, imax, timeout
-        data.reshape(-1)[0::channels] = coord[0]
-        data.reshape(-1)[1::channels] = coord[1]
-
-        q.put(data.copy())
+    gen_coords = (row for row in coords)
 
     starttime = monotonic()
     deq = deque()
