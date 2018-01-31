@@ -76,13 +76,14 @@ class BeamCtrlFrame(object, LabelFrame):
 
         Separator(frame, orient=HORIZONTAL).grid(row=1, columnspan=4, sticky="ew", pady=10)
 
-        self.make_entry(frame, self.var_dwell_time, "Dwell time", 5, 0, 0.01, 10.0)
+        self.make_entry(frame, self.var_dwell_time, "Dwell time (s)", 5, 0, 0.01, 10.0, 0.01)
+        self.make_entry(frame, self.var_exposure, "Exposure (s)", 6, 0, 0.01, 10.0, 0.01)
     
         self.make_slider(frame, self.var_strength, "Strength", 20, None, 0.0, 100.0)
         self.make_slider(frame, self.var_rotation, "Rotation", 21, None, -180, 180)
 
-        self.make_entry(frame, self.var_grid_x, "Grid x", 30, 0, 1, 100)
-        self.make_entry(frame, self.var_grid_y, "Grid y", 30, 2, 1, 100)
+        self.make_entry(frame, self.var_grid_x, "Grid x", 30, 0, 1, 100, 1)
+        self.make_entry(frame, self.var_grid_y, "Grid y", 30, 2, 1, 100, 1)
 
         Checkbutton(frame, text="Test", variable=self.toggle_test, command=self.test_scanning).grid(row=40, column=0, sticky="EW")
         Button(frame, text="Scan!", command=self.start_scanning).grid(row=40, column=1, sticky="EW")
@@ -97,11 +98,7 @@ class BeamCtrlFrame(object, LabelFrame):
         slider = Scale(frame, variable=var, from_=minval, to=maxval, orient=HORIZONTAL, command=command)
         slider.grid(row=row, column=2, columnspan=2, sticky="EW")
 
-    def make_entry(self, frame, var, label, row, column, minval, maxval):
-        if isinstance(var, IntVar):
-            increment = 1
-        else:
-            increment = 0.1
+    def make_entry(self, frame, var, label, row, column, minval, maxval, increment):
         Label(frame, text=label).grid(row=row, column=column, sticky="EW")
         e = Spinbox(frame, width=10, textvariable=var, from_=minval, to=maxval, increment=increment)
         e.grid(row=row, column=column+1, sticky="EW", padx=5)
@@ -116,12 +113,13 @@ class BeamCtrlFrame(object, LabelFrame):
 
         self.var_toggle_beam = BooleanVar(value=False)
 
-        self.var_dwell_time = DoubleVar(value=0.05)
-        self.var_grid_x = IntVar(value=10)
-        self.var_grid_y = IntVar(value=10)
-        self.var_strength = DoubleVar(value=50.0)
-        self.var_rotation = DoubleVar(value=0.0)
-        self.toggle_test = BooleanVar(value=False)
+        self.var_dwell_time  = DoubleVar(value=0.05)
+        self.var_exposure    = DoubleVar(value=0.01)
+        self.var_grid_x      = IntVar(value=10)
+        self.var_grid_y      = IntVar(value=10)
+        self.var_strength    = DoubleVar(value=50.0)
+        self.var_rotation    = DoubleVar(value=0.0)
+        self.toggle_test     = BooleanVar(value=False)
 
     def reset_channels(self):
         for channel in self.channels:
@@ -167,6 +165,7 @@ class BeamCtrlFrame(object, LabelFrame):
                    "grid_y": self.var_grid_y.get(),
                    "strength": self.var_strength.get() / 100,
                    "rotation": self.var_rotation.get(),
+                   "exposure": self.var_exposure.get(),
                    "beam_ctrl": self.beam_ctrl }
         return params
 

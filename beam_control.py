@@ -7,6 +7,25 @@ import high_precision_timers
 high_precision_timers.enable()
 
 
+def ramp(start, end, fs, duration):
+    """
+    start: (1, n_channels) vector
+    end:   (1, n_channels) vector
+    fs: frequency
+    duration: time in s
+    """
+
+    n_channels = start.size
+    n_samples = ceil(fs*duration)
+    length = ceil(n_samples*n_channels)
+    signal = np.empty(int(length), dtype=np.float32).reshape(-1, n_channels)
+
+    for channel in range(n_channels):
+        signal.reshape(-1)[channel::n_channels] = np.linspace(start[channel], end[channel], n_samples)
+
+    return signal
+
+
 class BeamCtrl(object):
     """docstring for BeamCtrl"""
     def __init__(self, 
@@ -23,6 +42,8 @@ class BeamCtrl(object):
         
         sd.default.device  = device
         sd.default.latency = 'low'
+        
+        self.device        = device
 
         self.fs            = fs           
         self.duration      = duration     
@@ -30,11 +51,12 @@ class BeamCtrl(object):
         self.n_channels    = n_channels   
         self.mapping       = mapping
  
+        self.dtype         = np.float32
+
         blocksize          = int(ceil(fs*duration))
         self.blocksize     = blocksize    
 
-        self.signal_data   = np.empty((blocksize, n_channels), dtype=np.float32)
-        self.x             = np.arange(fs*duration) / float(fs)  # x-axis
+        self.signal_data   = np.empty((blocksize, n_channels), dtype=self.dtype)
 
         self.channel_data   = None
 
@@ -42,8 +64,7 @@ class BeamCtrl(object):
         self.duration      = duration     
         blocksize          = int(ceil(fs*duration))
         self.blocksize     = blocksize    
-        self.signal_data   = np.empty((blocksize, n_channels), dtype=np.float32)
-        self.x             = np.arange(self.fs*duration) / float(self.fs)  # x-axis
+        self.signal_data   = np.empty((blocksize, n_channels), dtype=self.dtype)
 
     def get_signal(self, channel_data):
         n_channels = self.n_channels
@@ -51,16 +72,11 @@ class BeamCtrl(object):
         global_volume = self.global_volume
 
         signal_data = self.signal_data
-        x = self.x
         
         # multichannel should be interweaved like this: L1R1L2R2L3R3L4R4 (8 channels)
         # https://zach.se/generate-audio-with-python/
         
         for channel in range(n_channels):
-            # generate sine
-            #freq = channel_data[channel]
-            #signal_data.reshape(-1)[channel::n_channels] = (np.sin(2*np.pi*freq*x)).astype(np.float32) * global_volume
-
             # flat signal
             volume = channel_data[channel]
             signal_data.reshape(-1)[channel::n_channels] = volume * global_volume
@@ -103,21 +119,4 @@ class BeamCtrl(object):
         print "Scanning started!"
 
 
-def ramp(start, end, fs, duration):
-    """
-    start: (1, n_channels) vector
-    end:   (1, n_channels) vector
-    fs: frequency
-    duration: time in s
-    """
-
-    n_channels = start.size
-    n_samples = ceil(fs*duration)
-    length = ceil(n_samples*n_channels)
-    signal = np.empty(int(length), dtype=np.float32).reshape(-1, n_channels)
-
-    for channel in range(n_channels):
-        signal.reshape(-1)[channel::n_channels] = np.linspace(start[channel], end[channel], n_samples)
-
-    return signal
 
