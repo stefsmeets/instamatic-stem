@@ -1,47 +1,11 @@
 from Tkinter import *
 from ttk import *
-import threading
 
 from beam_control import BeamCtrl
-import time
-import numpy as np
 
 from IPython import embed
 
-
-settings_fireface = {
-'device': 'ASIO Fireface USB',
-'global_volume': 1.0,
-'fs': 44100,
-'duration': 0.01,
-'n_channels': 8,
-'chunksize': 1024,
-'mapping': (15,16,17,18,19,20,21,22),
-'channels': (
-    {"name": "BeamShift X", "var": None, "default": 0},
-    {"name": "BeamShift Y", "var": None, "default": 0},
-    {"name": "BeamTilt X?", "var": None, "default": 0},
-    {"name": "BeamTilt Y?", "var": None, "default": 0},
-    {"name": "ImageShift? X", "var": None, "default": 0},
-    {"name": "ImageShift? Y", "var": None, "default": 0},
-    {"name": "ImageTilt? X?", "var": None, "default": 0},
-    {"name": "ImageTilt? Y?", "var": None, "default": 0}
-)}
-
-settings_testing = {
-'device': None,
-'global_volume': 1.0,
-'fs': 44100,
-'duration': 1.0,
-'n_channels': 2,
-'chunksize': 1024,
-'mapping': (1,2),
-'channels': (
-    {"name": "Channel 1", "var": None, "default": 0},
-    {"name": "Channel 2", "var": None, "default": 0}
-)}
-
-DEFAULT_SETTINGS = settings_testing
+from settings import DEFAULT_SETTINGS
 
 
 class BeamCtrlFrame(object, LabelFrame):

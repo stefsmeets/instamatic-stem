@@ -3,7 +3,7 @@ import sounddevice as sd
 import threading
 import Queue
 import time
-from collections import deque
+from collections import deque, defaultdict
 from monotonic import monotonic
 
 from IPython import embed
@@ -44,6 +44,7 @@ def do_experiment(cam, strength,
 
         # outputBufferDacTime should correspond to when the data are played
         #  and thus when the image should be taken
+        # print streamtime.currentTime - starttime, streamtime.outputBufferDacTime - starttime
         deq.append(streamtime.outputBufferDacTime)
 
         try:
@@ -60,12 +61,20 @@ def do_experiment(cam, strength,
         else:
             outdata[:] = data
 
-
     fs = beam_ctrl.fs
     device = beam_ctrl.device
     channels = beam_ctrl.n_channels
     dtype = beam_ctrl.dtype
-    buffersize = 1000
+    buffersize = 10000
+    latency = "high"
+
+    print
+    print "    fs:", fs
+    print "    device:", device
+    print "    channels:", channels
+    print "    dtype:", dtype
+    print "    buffersize:", buffersize
+    print "    latency:", latency
 
     # blocksize = 1024
     # block_duration = float(blocksize) / fs
@@ -82,7 +91,7 @@ def do_experiment(cam, strength,
     data = np.zeros(blocksize*channels, dtype=np.float32).reshape(-1, channels)
 
     stream = sd.OutputStream(
-        samplerate=fs, blocksize=blocksize,
+        samplerate=fs, blocksize=blocksize, latency=latency,
         device=device, channels=channels, dtype=dtype,
         callback=callback, finished_callback=event.set, dither_off=True)
     
@@ -102,6 +111,12 @@ def do_experiment(cam, strength,
     starttime = monotonic()
     deq = deque()
     buffer = []
+
+    waiting_times = []
+    missed = []
+
+    i = 0
+
     cam.block()
     with stream:
         timeout = blocksize * buffersize / float(fs)
@@ -111,27 +126,81 @@ def do_experiment(cam, strength,
                 next_frame = deq.popleft()
             except IndexError:
                 print " -> No frames, continuing!"
-                time.sleep(dwell_time / 2)
+                time.sleep(dwell_time / 5)
                 continue
 
             diff = next_frame - stream.time
-            print "Waiting {:.3f} s (current: {:.3f}, next: {:.3f})".format(diff, stream.time - starttime, next_frame - starttime), 
+            print "Waiting {:-6.1f} ms (current: {:-6.3f}, next: {:-6.3f})".format(1000*diff, stream.time - starttime, next_frame - starttime),
             if diff < 0:
-                print " -> Missed the window, continuing!"
-                continue
+                if diff + dwell_time > exposure:
+                    print " -> second chance",
+                else:
+                    print " -> Missed the window, continuing! (latency: {})".format(stream.latency)
+                    missed.append(i)
+                    continue
+            else:
+                time.sleep(diff)
             
-            time.sleep(diff)
             cam.getImage(exposure)
             arr = cam.getImage(exposure)
             buffer.append(arr)
             print " -> Image captured!"
 
+            waiting_times.append(diff)
+            i += 1
+
         # print "timeout (s):", timeout ## not used
         event.wait()  # Wait until playback is finished
         print "Scanning done!"
-    cam.unblock()
+        print "Average wait: {:.2f} +- {:.2f} ms".format(1000*np.mean(waiting_times[1:]), 1000*np.std(waiting_times[1:]))
 
+    cam.unblock()
+    print "Missed frames: {}".format(len(missed))
     buffer = np.stack(buffer)
-    fn = "scan_{}.npy".format(time.time())
+    t = time.time()
+    fn = "scan_{}.npy".format(t)
     # np.save(fn, buffer)
     print "Wrote buffer to", fn
+
+    with open("scan_{}.txt".format(t), "w") as f:
+        print >> f, time.ctime()
+        print >> f
+        print >> f, "dwell_time:", dwell_time
+        print >> f, "exposure:", exposure
+        print >> f, "strength:", strength
+        print >> f, "grid_x:", grid_x
+        print >> f, "grid_y:", grid_y
+        print >> f, "rotation:", rotation
+        print >> f
+        print >> f, "fs:", fs
+        print >> f, "device:", device
+        print >> f, "channels:", channels
+        print >> f, "dtype:", dtype
+        print >> f, "buffersize:", buffersize
+        print >> f, "latency:", latency
+        print >> f
+        print >> f, "Missed"
+        print >> f, missed
+        print >> f
+        print >> f, "Coords"
+        print >> f, str(coords)
+        print >> f
+        print "Wrote info to", f.name
+
+
+if __name__ == '__main__':
+    from settings import DEFAULT_SETTINGS
+    from instamatic.camera.videostream import VideoStream
+    from beam_control import BeamCtrl
+
+    beam_ctrl = BeamCtrl(**DEFAULT_SETTINGS)
+    cam = VideoStream("simulate")
+
+    do_experiment(cam               = cam,
+                  dwell_time        = 0.04,
+                  exposure          = 0.01,
+                  strength          = 50.0,
+                  grid_x            = 20,
+                  grid_y            = 20,
+                  rotation          = 0.0,
+                  beam_ctrl         = beam_ctrl)

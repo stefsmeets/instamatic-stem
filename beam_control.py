@@ -2,9 +2,32 @@ import sounddev as sd
 import numpy as np
 from math import ceil
 import time
+from collections import defaultdict
+
+from pprint import pprint
 
 import high_precision_timers
 high_precision_timers.enable()
+
+
+
+
+def get_device_id(device, hostapi, kind="output"):
+    if kind == "output":
+        key = "max_output_channels"
+    elif key == "input":
+        key = "max_input_channels"
+    else:
+        raise ValueError("Invalid value for 'kind', must be 'input' or 'output'")
+
+    dct = defaultdict(dict)
+    for i, api in enumerate(sd.query_hostapis()):
+        for dev in api["devices"]:
+            dev_name = sd.query_devices(dev)["name"]
+            if sd.query_devices(dev)["max_output_channels"]:
+                dct[dev_name][i] = dev
+
+    return dct[device][hostapi]
 
 
 def ramp(start, end, fs, duration):
@@ -39,11 +62,20 @@ class BeamCtrl(object):
         **kwargs
         ): 
         super(BeamCtrl, self).__init__()
-        
+
+
+        hostapi = kwargs.get("hostapi", -1)
+        if hostapi >= 0:
+            device = get_device_id(device, hostapi)
+
         sd.default.device  = device
-        sd.default.latency = 'low'
-        
+    
         self.device        = device
+        sd.default.latency = 'low'
+        # sd.default.latency = 0.1
+
+        pprint(sd.query_devices(device))
+
 
         self.fs            = fs           
         self.duration      = duration     
