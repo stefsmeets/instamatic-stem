@@ -21,9 +21,9 @@ settings_fireface = {
 'device': 'ADAT 1 (1+2) (RME Fireface 802)',
 'global_volume': 1.0,
 'fs': 44100,
-# 'hostapi': 0,  # 'Windows MME'           # works well with 5/1
-# 'hostapi': 1,  # 'Windows DirectSound'   # Always missing the window, strange timing issues
-'hostapi': 3,  # 'Windows WASAPI'        # works well with 5/1, but misses sporadically
+# 'hostapi': 0,  # 'Windows MME'           # works well with 4/1
+# 'hostapi': 1,  # 'Windows DirectSound'   # strange timing issues, misses a lot
+'hostapi': 3,  # 'Windows WASAPI'        # WASAPI was designed for low latency and bypasses the windows mixer, use this one, works well
 'duration': 0.01,
 'n_channels': 2,
 'chunksize': 1024,
@@ -40,7 +40,7 @@ settings_fireface_WDM_K5 = {
 'device': 'ADAT 1 (1+2) (Fireface ADAT 1 (1+2))',
 'global_volume': 1.0,
 'fs': 44100,
-'hostapi': 4,  # 'Windows WDM-KS'
+'hostapi': 4,  # 'Windows WDM-KS', Windows Driver Model - Kernel Streaming
 'duration': 0.01,
 'n_channels': 2,
 'chunksize': 1024,

@@ -9,13 +9,47 @@ from monotonic import monotonic
 from IPython import embed
 
 
+def get_coords(grid_x=10, grid_y=10, strength=0.5, rotation=0.0, **kwargs):
+    mx = float(grid_x) / max(grid_x, grid_y)
+    my = float(grid_y) / max(grid_x, grid_y)
+
+    x = np.linspace(-strength*mx, strength*mx, grid_x)
+    y = np.linspace(-strength*my, strength*my, grid_y)
+
+    xx, yy = np.meshgrid(x, y)
+    coords = np.vstack((xx.reshape(-1), yy.reshape(-1))).T
+
+    theta = np.radians(rotation)
+    r = np.array( [[ np.cos(theta), -np.sin(theta) ],
+                   [ np.sin(theta),  np.cos(theta) ]] )
+
+    return np.dot(coords, r)
+
+
+def signal_generator(coords, pre_fill=5, post_fill=1):
+    """Convert the coordinate signal array into a generator
+    pre_fill and post_fill add some blocks before and after the signal
+
+    yield (collect[bool], coordinate[x, y])"""
+
+    for _ in range(pre_fill):
+        yield False, [0, 0]
+    for row in coords:
+        yield True, row
+    for _ in range(post_fill):
+        yield False, [0, 0]
+
+
 def do_experiment(cam, strength,
     grid_x,
     grid_y,
     dwell_time,
     rotation,
     exposure,
-    beam_ctrl):
+    beam_ctrl,
+    plot=False):
+
+    channels = beam_ctrl.n_channels
 
     print "starting experiment"
     print
@@ -25,14 +59,14 @@ def do_experiment(cam, strength,
     print "    Grid y:     {}".format(grid_y)
     print "    Rotation:   {}".format(rotation)
     print "    Strength:   {}".format(strength)
+    print
+    blocksize = int(dwell_time * beam_ctrl.fs)
+    block_duration = float(blocksize) / beam_ctrl.fs
+    print "    Blocksize:  {}".format(blocksize)
+    print
 
-    # assert dwell_time > exposure, "Dwell time ({} s) must be larger than exposure ({} s)".format(dwell_time, exposure)
+    assert dwell_time > exposure, "Dwell time ({} s) must be larger than exposure ({} s)".format(dwell_time, exposure)
 
-    x = np.linspace(-strength, strength, grid_x)
-    y = np.linspace(-strength, strength, grid_y)
-
-    xx, yy = np.meshgrid(x, y)
-    coords = np.vstack((xx.reshape(-1), yy.reshape(-1))).T
 
     def callback(outdata, frames, streamtime, status):
         assert frames == blocksize
@@ -42,70 +76,29 @@ def do_experiment(cam, strength,
             raise sd.CallbackAbort
         assert not status
 
-        # outputBufferDacTime should correspond to when the data are played
-        #  and thus when the image should be taken
-        # print streamtime.currentTime - starttime, streamtime.outputBufferDacTime - starttime
-        deq.append(streamtime.outputBufferDacTime)
-
         try:
-            coord = gen_coords.next()
+            collect, coord = gen_coords.next()
             data.reshape(-1)[0::channels] = coord[0]
             data.reshape(-1)[1::channels] = coord[1]
         except StopIteration:
-            raise sd.CallbackAbort
-
-        if len(data) < len(outdata):
-            outdata[:len(data)] = data
-            outdata[len(data):] = 0
-            print "stop"
+            print "Stopping now!!"
             raise sd.CallbackStop
-        else:
-            outdata[:] = data
 
-    fs = beam_ctrl.fs
-    device = beam_ctrl.device
-    channels = beam_ctrl.n_channels
-    dtype = beam_ctrl.dtype
-    buffersize = 10000
-    latency = "high"
+        if collect:
+            queue.append(streamtime.outputBufferDacTime)
 
-    print
-    print "    fs:", fs
-    print "    device:", device
-    print "    channels:", channels
-    print "    dtype:", dtype
-    print "    buffersize:", buffersize
-    print "    latency:", latency
-
-    # blocksize = 1024
-    # block_duration = float(blocksize) / fs
-    # print "block duration (s):", block_duration
-    
-    blocksize = int(dwell_time * fs)
-    block_duration = float(blocksize) / fs
-    print "    Blocksize:", blocksize
-    print
-
-    event = threading.Event()
-    q = Queue.Queue(maxsize=buffersize)
+        outdata[:] = data
 
     data = np.zeros(blocksize*channels, dtype=np.float32).reshape(-1, channels)
 
-    stream = sd.OutputStream(
-        samplerate=fs, blocksize=blocksize, latency=latency,
-        device=device, channels=channels, dtype=dtype,
-        callback=callback, finished_callback=event.set, dither_off=True)
-    
-    theta = np.radians(rotation)
-    r = np.array( [[ np.cos(theta), -np.sin(theta) ],
-                   [ np.sin(theta),  np.cos(theta) ]] )
+    event = threading.Event()
+    stream = beam_ctrl.get_output_stream(callback=callback, finished_callback=event.set, blocksize=blocksize)
 
-    coords = np.dot(coords, r)
-
-    gen_coords = (row for row in coords)
+    coords = get_coords(grid_x, grid_y, strength, rotation)
+    gen_coords = signal_generator(coords)
 
     starttime = monotonic()
-    deq = deque()
+    queue = deque()
     buffer = []
 
     waiting_times = []
@@ -113,22 +106,25 @@ def do_experiment(cam, strength,
 
     i = 0
 
+    t0 = time.clock()
     cam.block()
-    with stream:
-        timeout = blocksize * buffersize / float(fs)
 
-        while stream.active or len(deq):
+    with stream:
+
+        while stream.active or len(queue):
             try:
-                next_frame = deq.popleft()
+                next_frame = queue.popleft()
             except IndexError:
                 print " -> No frames, continuing!"
-                time.sleep(dwell_time / 5)
+                time.sleep(dwell_time / 4)
                 continue
+            else:
+                i += 1
 
             diff = next_frame - stream.time
             print "Waiting {:-6.1f} ms (current: {:-6.3f}, next: {:-6.3f})".format(1000*diff, stream.time - starttime, next_frame - starttime),
             if diff < 0:
-                if diff + dwell_time > exposure:
+                if diff + dwell_time > exposure*1.5:
                     print " -> second chance",
                 else:
                     print " -> Missed the window, continuing! (latency: {})".format(stream.latency)
@@ -143,15 +139,19 @@ def do_experiment(cam, strength,
             print " -> Image captured!"
 
             waiting_times.append(diff)
-            i += 1
 
-        # print "timeout (s):", timeout ## not used
         event.wait()  # Wait until playback is finished
+        print
         print "Scanning done!"
+        print "Stream latency: {} s".format(stream.latency)
         print "Average wait: {:.2f} +- {:.2f} ms".format(1000*np.mean(waiting_times[1:]), 1000*np.std(waiting_times[1:]))
 
     cam.unblock()
-    print "Missed frames: {}".format(len(missed))
+    t1 = time.clock()
+
+    print "Time taken: {:.1f} s".format(t1-t0)
+    print "Frametime: {:.1f} ms ({:.1f} fps)".format(1000*(t1-t0)/len(coords), len(coords)/(t1-t0))
+    print "Missed frames: {} ({:.1%})".format(len(missed), float(len(missed))/len(coords))
     buffer = np.stack(buffer)
     t = time.time()
     fn = "scan_{}.npy".format(t)
@@ -168,12 +168,7 @@ def do_experiment(cam, strength,
         print >> f, "grid_y:", grid_y
         print >> f, "rotation:", rotation
         print >> f
-        print >> f, "fs:", fs
-        print >> f, "device:", device
-        print >> f, "channels:", channels
-        print >> f, "dtype:", dtype
-        print >> f, "buffersize:", buffersize
-        print >> f, "latency:", latency
+        print >> f, beam_ctrl.info()
         print >> f
         print >> f, "Missed"
         print >> f, missed
@@ -185,6 +180,10 @@ def do_experiment(cam, strength,
 
 
 if __name__ == '__main__':
+    import psutil, os
+    p = psutil.Process(os.getpid())
+    p.nice(psutil.REALTIME_PRIORITY_CLASS)  # set python process as high priority
+
     from settings import DEFAULT_SETTINGS
     from instamatic.camera.videostream import VideoStream
     from beam_control import BeamCtrl
@@ -193,8 +192,8 @@ if __name__ == '__main__':
     cam = VideoStream("simulate")
 
     do_experiment(cam               = cam,
-                  dwell_time        = 0.04,
-                  exposure          = 0.01,
+                  dwell_time        = 0.035,
+                  exposure          = 0.010,
                   strength          = 50.0,
                   grid_x            = 20,
                   grid_y            = 20,

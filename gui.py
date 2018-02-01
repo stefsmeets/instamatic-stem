@@ -14,6 +14,7 @@ import threading
 import Queue
 
 import datetime
+from experiment import get_coords
 
 from instamatic.camera.videostream import VideoStream
 
@@ -58,8 +59,10 @@ class DataCollectionController(object):
             try:
                 if job == "scanning":
                     self.acquire_data_scanning(**kwargs)
+                elif job == "plot_scan_grid":
+                    self.plot_scan_grid(**kwargs)
                 else:
-                    print "Unknown job: {}".format(jobs)
+                    print "Unknown job: {}".format(job)
                     print "Kwargs:\n{}".format(kwargs)
             except Exception as e:
                 traceback.print_exc()
@@ -69,6 +72,18 @@ class DataCollectionController(object):
     def acquire_data_scanning(self, **kwargs):
         from experiment import do_experiment
         do_experiment(self.stream, **kwargs)
+
+    def plot_scan_grid(self, **kwargs):
+        import matplotlib.pyplot as plt
+
+        coords = get_coords(**kwargs)
+
+        plt.scatter(*coords.T)
+        plt.title("Coordinates for scan grid")
+        plt.xlabel("X axis")
+        plt.ylabel("Y axis")
+        plt.axis('equal')
+        plt.show()
 
  
 class DataCollectionGUI(VideoStream):
@@ -130,6 +145,10 @@ class DataCollectionGUI(VideoStream):
 
 
 def main():
+    import psutil, os
+    p = psutil.Process(os.getpid())
+    p.nice(psutil.REALTIME_PRIORITY_CLASS)  # set python process as high priority
+
     from os.path import dirname as up
     
     logging_dir = up(up(up(up(__file__))))

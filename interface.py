@@ -5,7 +5,10 @@ from beam_control import BeamCtrl
 
 from IPython import embed
 
+import numpy as np
+
 from settings import DEFAULT_SETTINGS
+from experiment import get_coords
 
 
 class BeamCtrlFrame(object, LabelFrame):
@@ -27,11 +30,11 @@ class BeamCtrlFrame(object, LabelFrame):
         Button(frame, text="reset", command=self.reset_channels).grid(row=5, column=1, sticky="W")
 
         for i, channel in enumerate(self.channels):
-            self.make_slider(frame, channel["var"], channel["name"], 10+i, self.update_channels, -100, 100)
+            self.make_slider(frame, channel["var"], channel["name"], 10+i, -100, 100, self.update_channels)
 
         Separator(frame, orient=HORIZONTAL).grid(row=100, columnspan=4, sticky="ew", pady=10)
 
-        self.make_slider(frame, self.var_damping, "Damping factor", 101, self.update_channels, 0, 100)
+        self.make_slider(frame, self.var_damping, "Damping factor", 101, 0, 100, self.update_channels)
 
         frame.pack(side="top", fill="x", padx=10, pady=10)
         frame.columnconfigure(2, weight=1)
@@ -43,18 +46,19 @@ class BeamCtrlFrame(object, LabelFrame):
         self.make_entry(frame, self.var_dwell_time, "Dwell time (s)", 5, 0, 0.01, 10.0, 0.01)
         self.make_entry(frame, self.var_exposure, "Exposure (s)", 6, 0, 0.01, 10.0, 0.01)
     
-        self.make_slider(frame, self.var_strength, "Strength", 20, None, 0.0, 100.0)
-        self.make_slider(frame, self.var_rotation, "Rotation", 21, None, -180, 180)
+        self.make_slider(frame, self.var_strength, "Strength", 20, 0.0, 100.0, self.update_test_stream)
+        self.make_slider(frame, self.var_rotation, "Rotation", 21, -180, 180, self.update_test_stream)
 
-        self.make_entry(frame, self.var_grid_x, "Grid x", 30, 0, 1, 100, 1)
-        self.make_entry(frame, self.var_grid_y, "Grid y", 30, 2, 1, 100, 1)
+        self.make_entry(frame, self.var_grid_x, "Grid x", 30, 0, 2, 100, 1)
+        self.make_entry(frame, self.var_grid_y, "Grid y", 30, 2, 2, 100, 1)
 
-        Checkbutton(frame, text="Test", variable=self.toggle_test, command=self.test_scanning).grid(row=40, column=0, sticky="EW")
-        Button(frame, text="Scan!", command=self.start_scanning).grid(row=40, column=1, sticky="EW")
+        Checkbutton(frame, text="Show perimeter", variable=self.var_toggle_test, command=self.toggle_test_scanning).grid(row=40, column=0, sticky="EW")
+        Button(frame, text="Plot coords", command=self.show_grid_plot).grid(row=40, column=2, sticky="EW")
+        Button(frame, text="Scan!", command=self.start_scanning).grid(row=40, column=3, sticky="EW")
 
         frame.pack(side="top", fill="x", padx=10, pady=10)
 
-    def make_slider(self, frame, var, label, row, command, minval, maxval):
+    def make_slider(self, frame, var, label, row, minval, maxval, command=None):
         Label(frame, text=label, width=20).grid(row=row, column=0, sticky="W")
         e = Spinbox(frame, width=10, textvariable=var, from_=minval, to=maxval, increment=0.1)
         e.grid(row=row, column=1, sticky="W", padx=5)
@@ -80,10 +84,12 @@ class BeamCtrlFrame(object, LabelFrame):
         self.var_dwell_time  = DoubleVar(value=0.05)
         self.var_exposure    = DoubleVar(value=0.01)
         self.var_grid_x      = IntVar(value=10)
+        self.var_grid_x.trace("w", self.update_test_stream)
         self.var_grid_y      = IntVar(value=10)
+        self.var_grid_y.trace("w", self.update_test_stream)
         self.var_strength    = DoubleVar(value=50.0)
         self.var_rotation    = DoubleVar(value=0.0)
-        self.toggle_test     = BooleanVar(value=False)
+        self.var_toggle_test = BooleanVar(value=False)
 
     def reset_channels(self):
         for channel in self.channels:
@@ -94,9 +100,9 @@ class BeamCtrlFrame(object, LabelFrame):
         toggle = self.var_toggle_beam.get()
         if toggle:
             self.update_channels()
-            self.beam_ctrl.start_stream()
+            self.beam_ctrl.play()
         else:
-            self.beam_ctrl.stop_stream()
+            self.beam_ctrl.stop()
 
     def set_trigger(self, trigger=None, q=None):
         self.triggerEvent = trigger
@@ -120,9 +126,6 @@ class BeamCtrlFrame(object, LabelFrame):
 
         return channel_data
 
-    def test_scanning(self, *args):
-        pass
-
     def get_scanning_params(self):
         params = { "dwell_time": self.var_dwell_time.get(),
                    "grid_x": self.var_grid_x.get(),
@@ -133,9 +136,35 @@ class BeamCtrlFrame(object, LabelFrame):
                    "beam_ctrl": self.beam_ctrl }
         return params
 
+    def toggle_test_scanning(self, *args):
+        toggle = self.var_toggle_test.get()
+        if toggle:
+            self.update_test_stream()
+            self.beam_ctrl.play()
+        else:
+            self.beam_ctrl.stop()
+
+    def update_test_stream(self, *args):
+        if self.var_toggle_test.get():
+            params = self.get_scanning_params()
+            
+            coords = get_coords(**params)
+            grid_x = params["grid_x"]
+            grid_y = params["grid_y"]
+
+            idx = 0, grid_x-1, -1, -grid_y
+            corners = coords.take(idx, 0)
+
+            self.beam_ctrl.do_box_scan(corners)
+
     def start_scanning(self, *args):
         params = self.get_scanning_params()
         self.q.put(("scanning", params))
+        self.triggerEvent.set()
+
+    def show_grid_plot(self, *args):
+        params = self.get_scanning_params()
+        self.q.put(("plot_scan_grid", params))
         self.triggerEvent.set()
 
 

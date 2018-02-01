@@ -71,7 +71,7 @@ class BeamCtrl(object):
         sd.default.device  = device
     
         self.device        = device
-        sd.default.latency = 'low'
+        sd.default.latency = self.latency = 'low'
         # sd.default.latency = 0.1
 
         pprint(sd.query_devices(device))
@@ -91,6 +91,13 @@ class BeamCtrl(object):
         self.signal_data   = np.empty((blocksize, n_channels), dtype=self.dtype)
 
         self.channel_data   = None
+
+    def info(self):
+        return """fs: {}
+    device: {}
+    channels: {}
+    dtype: {}
+    latency: {}""".format(self.fs, self.device, self.n_channels, self.dtype, self.latency)
 
     def set_duration(self, duration):
         self.duration      = duration     
@@ -125,13 +132,29 @@ class BeamCtrl(object):
         self.signal = self.get_signal(channel_data)
         sd.play(self.signal_data, self.fs, mapping=self.mapping, loop=loop, blocking=blocking)
 
-    def start_stream(self):
+    def play(self):
+        """Continuously loop what is set as self.signal_data until stop is called"""
         print "start stream"
         sd.play(self.signal_data, self.fs, mapping=self.mapping, loop=True)
 
-    def stop_stream(self):
+    def stop(self):
         print "stop stream"
         sd.stop()
+
+    def get_output_stream(self, callback, finished_callback, blocksize=None, latency=None):
+        """Generate an output stream based on class parameters"""
+
+        if not latency:
+            latency = self.latency
+        if not blocksize:
+            blocksize = self.blocksize
+
+        stream = sd.OutputStream(
+            samplerate=self.fs, blocksize=blocksize, latency=latency,
+            device=self.device, channels=self.n_channels, dtype=self.dtype,
+            callback=callback, finished_callback=finished_callback, dither_off=True)
+
+        return stream
 
     def do_scan(self, o, x, y, duration=1.0, slices=20):
         fs = self.fs
@@ -150,5 +173,28 @@ class BeamCtrl(object):
         sd.play(ramps, fs, mapping=mapping, blocking=False)
         print "Scanning started!"
 
+    @property
+    def active(self):
+        try:
+            stream = sd.get_stream()
+        except RuntimeError:
+            return False
+        return stream.active
 
+    def do_box_scan(self, coords, duration=0.5):
+        fs = self.fs
+        mapping = self.mapping
+        ramps = []
 
+        ramps.append(ramp(coords[0], coords[1], fs, duration))
+        ramps.append(ramp(coords[1], coords[2], fs, duration))
+        ramps.append(ramp(coords[2], coords[3], fs, duration))
+        ramps.append(ramp(coords[3], coords[0], fs, duration))
+
+        ramps = np.vstack(ramps)
+
+        try:
+            self.signal_data[:] = ramps
+        except ValueError:
+            self.signal_data = np.zeros_like(ramps)
+            self.signal_data[:] = ramps
