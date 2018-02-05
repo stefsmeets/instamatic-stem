@@ -70,11 +70,11 @@ class BeamCtrl(object):
 
         sd.default.device  = device
     
-        self.device        = device
+        self.device        = sd.default.device[1]
         sd.default.latency = self.latency = 'low'
         # sd.default.latency = 0.1
 
-        pprint(sd.query_devices(device))
+        pprint(sd.query_devices(self.device))
 
 
         self.fs            = fs           
@@ -128,18 +128,18 @@ class BeamCtrl(object):
 
         # print "signal updated", time.clock()
 
-    def play(self, channel_data, loop=False, blocking=False):
-        self.signal = self.get_signal(channel_data)
-        sd.play(self.signal_data, self.fs, mapping=self.mapping, loop=loop, blocking=blocking)
-
-    def play(self):
+    def play(self, loop=True, blocking=False):
         """Continuously loop what is set as self.signal_data until stop is called"""
         print "start stream"
-        sd.play(self.signal_data, self.fs, mapping=self.mapping, loop=True)
+        sd.play(self.signal_data, self.fs, mapping=self.mapping, loop=loop, blocking=blocking)
 
     def stop(self):
         print "stop stream"
         sd.stop()
+
+    @property
+    def _stream(self):
+        return sd.get_stream()
 
     def get_output_stream(self, callback, finished_callback, blocksize=None, latency=None):
         """Generate an output stream based on class parameters"""
@@ -183,7 +183,6 @@ class BeamCtrl(object):
 
     def do_box_scan(self, coords, duration=0.5):
         fs = self.fs
-        mapping = self.mapping
         ramps = []
 
         ramps.append(ramp(coords[0], coords[1], fs, duration))

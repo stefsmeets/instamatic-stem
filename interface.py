@@ -13,14 +13,12 @@ from experiment import get_coords
 
 class BeamCtrlFrame(object, LabelFrame):
     """docstring for BeamCtrlFrame"""
-    def __init__(self, parent, settings=DEFAULT_SETTINGS, beam_ctrl=None):
+    def __init__(self, parent, settings=DEFAULT_SETTINGS):
         LabelFrame.__init__(self, parent, text="Fine beam control")
         self.parent = parent
 
-        if not beam_ctrl:
-            beam_ctrl = BeamCtrl(**settings)
+        self.beam_ctrl = None
 
-        self.beam_ctrl = beam_ctrl
         self.channels = settings["channels"]
         self.init_vars()
 
@@ -114,7 +112,8 @@ class BeamCtrlFrame(object, LabelFrame):
             channel_data = self.get_channel_data()
         except ValueError as e:
             return
-        self.beam_ctrl.update(channel_data)
+        if self.beam_ctrl:
+            self.beam_ctrl.update(channel_data)
 
     def get_channel_data(self):
         channel_data = []

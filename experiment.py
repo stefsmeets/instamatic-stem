@@ -92,7 +92,13 @@ def do_experiment(cam, strength,
     data = np.zeros(blocksize*channels, dtype=np.float32).reshape(-1, channels)
 
     event = threading.Event()
-    stream = beam_ctrl.get_output_stream(callback=callback, finished_callback=event.set, blocksize=blocksize)
+
+    stream = sd.OutputStream(
+            samplerate=beam_ctrl.fs, blocksize=blocksize, latency=beam_ctrl.latency,
+            device=beam_ctrl.device, channels=beam_ctrl.n_channels, dtype=beam_ctrl.dtype,
+            callback=callback, finished_callback=event.set, dither_off=True)
+
+    # stream = beam_ctrl.get_output_stream(callback=callback, finished_callback=event.set, blocksize=blocksize)
 
     coords = get_coords(grid_x, grid_y, strength, rotation)
     gen_coords = signal_generator(coords)

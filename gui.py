@@ -27,10 +27,11 @@ MODULES = Module("scanning", "scanning", False, BeamCtrlFrame),
 
 class DataCollectionController(object):
     """docstring for DataCollectionController"""
-    def __init__(self, stream, log=None):
+    def __init__(self, stream, beam_ctrl, log=None):
         super(DataCollectionController, self).__init__()
         self.stream = stream
         self.camera = stream.cam.name
+        self.beam_ctrl = beam_ctrl
         self.log = log
 
         self.q = Queue.LifoQueue(maxsize=1)
@@ -39,6 +40,7 @@ class DataCollectionController(object):
         self.module_scanning = self.stream.get_module("scanning")
 
         self.module_scanning.set_trigger(trigger=self.triggerEvent, q=self.q)
+        self.module_scanning.beam_ctrl = beam_ctrl
 
         self.exitEvent = threading.Event()
         self.stream._atexit_funcs.append(self.exitEvent.set)
@@ -72,6 +74,9 @@ class DataCollectionController(object):
     def acquire_data_scanning(self, **kwargs):
         from experiment import do_experiment
         do_experiment(self.stream, **kwargs)
+        
+        # from experiment import do_experiment_continuous
+        # do_experiment_continuous(self.stream, **kwargs)
 
     def plot_scan_grid(self, **kwargs):
         import matplotlib.pyplot as plt
@@ -167,12 +172,16 @@ def main():
     # Work-around for race condition (errors) that occurs when 
     # DataCollectionController tries to access them
 
+    from settings import DEFAULT_SETTINGS as settings
+    from beam_control import BeamCtrl
+    beam_ctrl = BeamCtrl(**settings)
+
     stream = DataCollectionGUI(cam="simulate")
 
     while not stream._modules_have_loaded:
         time.sleep(0.1)
 
-    gui = DataCollectionController(stream, log=log)
+    gui = DataCollectionController(stream, beam_ctrl=beam_ctrl, log=log)
 
 
 if __name__ == '__main__':
