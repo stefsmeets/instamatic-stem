@@ -1,4 +1,4 @@
-import sounddev as sd
+import sounddevice as sd
 import numpy as np
 from math import ceil
 import time
@@ -93,11 +93,7 @@ class BeamCtrl(object):
         self.channel_data   = None
 
     def info(self):
-        return """fs: {}
-    device: {}
-    channels: {}
-    dtype: {}
-    latency: {}""".format(self.fs, self.device, self.n_channels, self.dtype, self.latency)
+        return "fs: {}\ndevice: {}\nchannels: {}\ndtype: {}\nlatency: {}".format(self.fs, self.device, self.n_channels, self.dtype, self.latency)
 
     def set_duration(self, duration):
         self.duration      = duration     

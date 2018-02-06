@@ -84,7 +84,7 @@ class DataCollectionController(object):
         coords = get_coords(**kwargs)
 
         plt.scatter(*coords.T)
-        plt.title("Coordinates for scan grid")
+        plt.title("Coordinates for grid scan")
         plt.xlabel("X axis")
         plt.ylabel("Y axis")
         plt.axis('equal')
@@ -146,9 +146,6 @@ class DataCollectionGUI(VideoStream):
         print " >> Wrote file:", outfile
 
 
-
-
-
 def main():
     import psutil, os
     p = psutil.Process(os.getpid())
@@ -156,7 +153,7 @@ def main():
 
     from os.path import dirname as up
     
-    logging_dir = up(up(up(up(__file__))))
+    logging_dir = up(up(up(__file__)))
 
     date = datetime.datetime.now().strftime("%Y-%m-%d")
     logfile = os.path.join(logging_dir, "logs", "scanning_{}.log".format(date))
