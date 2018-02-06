@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 import sounddevice as sd
 import numpy as np
 from math import ceil
@@ -6,7 +8,7 @@ from collections import defaultdict
 
 from pprint import pprint
 
-import high_precision_timers
+from . import high_precision_timers
 high_precision_timers.enable()
 
 
@@ -126,11 +128,11 @@ class BeamCtrl(object):
 
     def play(self, loop=True, blocking=False):
         """Continuously loop what is set as self.signal_data until stop is called"""
-        print "start stream"
+        print("start stream")
         sd.play(self.signal_data, self.fs, mapping=self.mapping, loop=loop, blocking=blocking)
 
     def stop(self):
-        print "stop stream"
+        print("stop stream")
         sd.stop()
 
     @property
@@ -165,9 +167,9 @@ class BeamCtrl(object):
 
         ramps = np.vstack(ramps)
 
-        print ramps.shape
+        print(ramps.shape)
         sd.play(ramps, fs, mapping=mapping, blocking=False)
-        print "Scanning started!"
+        print("Scanning started!")
 
     @property
     def active(self):

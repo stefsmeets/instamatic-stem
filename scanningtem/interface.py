@@ -1,14 +1,15 @@
+from __future__ import absolute_import
 from Tkinter import *
 from ttk import *
 
-from beam_control import BeamCtrl
+from .beam_control import BeamCtrl
 
 from IPython import embed
 
 import numpy as np
 
-from settings import DEFAULT_SETTINGS
-from experiment import get_coords
+from .settings import DEFAULT_SETTINGS
+from .experiment import get_coords
 
 
 class BeamCtrlFrame(object, LabelFrame):

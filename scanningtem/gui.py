@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 from Tkinter import *
 from ttk import *
 
@@ -14,12 +16,12 @@ import threading
 import Queue
 
 import datetime
-from experiment import get_coords
+from .experiment import get_coords
 
 from instamatic.camera.videostream import VideoStream
 
 from collections import namedtuple
-from interface import BeamCtrlFrame
+from .interface import BeamCtrlFrame
 Module = namedtuple('Module', ['name', 'display_name', 'tabbed', 'tk_frame'])
 
 MODULES = Module("scanning", "scanning", False, BeamCtrlFrame),
@@ -64,15 +66,15 @@ class DataCollectionController(object):
                 elif job == "plot_scan_grid":
                     self.plot_scan_grid(**kwargs)
                 else:
-                    print "Unknown job: {}".format(job)
-                    print "Kwargs:\n{}".format(kwargs)
+                    print("Unknown job: {}".format(job))
+                    print("Kwargs:\n{}".format(kwargs))
             except Exception as e:
                 traceback.print_exc()
                 self.log.debug("Error caught -> {} while running '{}' with {}".format(repr(e), job, kwargs))
                 self.log.exception(e)
 
     def acquire_data_scanning(self, **kwargs):
-        from experiment import do_experiment
+        from .experiment import do_experiment
         do_experiment(self.stream, **kwargs)
         
         # from experiment import do_experiment_continuous
@@ -143,7 +145,7 @@ class DataCollectionGUI(VideoStream):
         except:
             frame = self.frame
         write_tiff(outfile, frame)
-        print " >> Wrote file:", outfile
+        print(" >> Wrote file:", outfile)
 
 
 def main():
@@ -169,8 +171,8 @@ def main():
     # Work-around for race condition (errors) that occurs when 
     # DataCollectionController tries to access them
 
-    from settings import DEFAULT_SETTINGS as settings
-    from beam_control import BeamCtrl
+    from .settings import DEFAULT_SETTINGS as settings
+    from .beam_control import BeamCtrl
     beam_ctrl = BeamCtrl(**settings)
 
     stream = DataCollectionGUI(cam="simulate")

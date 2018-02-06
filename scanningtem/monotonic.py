@@ -1,3 +1,4 @@
+from __future__ import print_function
 import ctypes
 
 # https://github.com/atdt/monotonic
@@ -13,4 +14,4 @@ def monotonic():
     return GetTickCount64() / 1000.0
 
 if __name__ == '__main__':
-    print "Monotonic time:", monotonic()
+    print("Monotonic time:", monotonic())
