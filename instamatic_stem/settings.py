@@ -63,5 +63,5 @@ settings_testing = {
     {"name": "Channel 2", "var": None, "default": 0}
 )}
 
-# DEFAULT_SETTINGS = settings_fireface
-DEFAULT_SETTINGS = settings_testing
+DEFAULT_SETTINGS = settings_fireface
+# DEFAULT_SETTINGS = settings_testing

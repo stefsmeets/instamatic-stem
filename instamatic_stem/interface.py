@@ -12,6 +12,8 @@ from .settings import DEFAULT_SETTINGS
 from .experiment import get_coords
 
 
+global_damping_factor = 100
+
 class BeamCtrlFrame(object, LabelFrame):
     """docstring for BeamCtrlFrame"""
     def __init__(self, parent, settings=DEFAULT_SETTINGS):
@@ -33,7 +35,7 @@ class BeamCtrlFrame(object, LabelFrame):
 
         Separator(frame, orient=HORIZONTAL).grid(row=100, columnspan=4, sticky="ew", pady=10)
 
-        self.make_slider(frame, self.var_damping, "Damping factor", 101, 0, 100, self.update_channels)
+        self.make_slider(frame, self.var_damping, "Strength", 101, 0, 100, self.update_channels)
 
         frame.pack(side="top", fill="x", padx=10, pady=10)
         frame.columnconfigure(2, weight=1)
@@ -87,6 +89,7 @@ class BeamCtrlFrame(object, LabelFrame):
         self.var_grid_y      = IntVar(value=10)
         self.var_grid_y.trace("w", self.update_test_stream)
         self.var_strength    = DoubleVar(value=50.0)
+        self.var_strength.trace("w", self.update_test_stream)
         self.var_rotation    = DoubleVar(value=0.0)
         self.var_toggle_test = BooleanVar(value=False)
 
@@ -118,7 +121,7 @@ class BeamCtrlFrame(object, LabelFrame):
 
     def get_channel_data(self):
         channel_data = []
-        damping = self.var_damping.get() / 100.0
+        damping = self.var_damping.get() / (100.0 * global_damping_factor)
 
         for channel in self.channels:
             val = channel["var"].get()
@@ -130,7 +133,7 @@ class BeamCtrlFrame(object, LabelFrame):
         params = { "dwell_time": self.var_dwell_time.get(),
                    "grid_x": self.var_grid_x.get(),
                    "grid_y": self.var_grid_y.get(),
-                   "strength": self.var_strength.get() / 100,
+                   "strength": self.var_strength.get() / (100.0 * global_damping_factor),
                    "rotation": self.var_rotation.get(),
                    "exposure": self.var_exposure.get(),
                    "beam_ctrl": self.beam_ctrl }
