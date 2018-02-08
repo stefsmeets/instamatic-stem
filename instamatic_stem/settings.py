@@ -1,83 +1,72 @@
-settings_fireface_all = {
+asio_base = {
 'device': 'ASIO Fireface USB',
-'global_volume': 1.0,
-'fs': 44100,
 'hostapi': 2,  # asio
-'duration': 0.01,
-'n_channels': 8,
-'chunksize': 1024,
-'mapping': (15,16,17,18,19,20,21,22),
-'channels': (
-    {"name": "BeamShift X", "var": None, "default": 0},
-    {"name": "BeamShift Y", "var": None, "default": 0},
-    {"name": "BeamTilt X?", "var": None, "default": 0},
-    {"name": "BeamTilt Y?", "var": None, "default": 0},
-    {"name": "ImageShift? X", "var": None, "default": 0},
-    {"name": "ImageShift? Y", "var": None, "default": 0},
-    {"name": "ImageTilt? X?", "var": None, "default": 0},
-    {"name": "ImageTilt? Y?", "var": None, "default": 0}
-)}
+}
 
-settings_asio_beamshift = {
-'device': 'ASIO Fireface USB',
-'global_volume': 1.0,
-'fs': 44100,
-'hostapi': 2,  # asio
-'duration': 0.01,
-'n_channels': 2,
-'chunksize': 1024,
-'mapping': (14,15),
-'channels': (
+cla1_asio = {**asio_base,
+**{'mapping': (14,15),
+   'channels': (
     {"name": "BeamShift X", "var": None, "default": 0},
-    {"name": "BeamShift Y", "var": None, "default": 0},
-)}
+    {"name": "BeamShift Y", "var": None, "default": 0})
+}}
 
-settings_fireface = {
+all_asio = {**asio_base,
+**{'mapping': (15,16,17,18,19,20,21,22),
+   'channels': (
+      {"name": "BeamShift X", "var": None, "default": 0},
+      {"name": "BeamShift Y", "var": None, "default": 0},
+      {"name": "BeamTilt X?", "var": None, "default": 0},
+      {"name": "BeamTilt Y?", "var": None, "default": 0},
+      {"name": "ImageShift? X", "var": None, "default": 0},
+      {"name": "ImageShift? Y", "var": None, "default": 0},
+      {"name": "ImageTilt? X?", "var": None, "default": 0},
+      {"name": "ImageTilt? Y?", "var": None, "default": 0})
+}}
+
+cla1_adat_base = {
 'device': 'ADAT 1 (1+2) (RME Fireface 802)',
-'global_volume': 1.0,
-'fs': 44100,
-# 'hostapi': 0,  # 'Windows MME'           # works well with 4/1
-# 'hostapi': 1,  # 'Windows DirectSound'   # strange timing issues, misses a lot
-'hostapi': 3,  # 'Windows WASAPI'        # WASAPI was designed for low latency and bypasses the windows mixer, use this one, works well
-'duration': 0.01,
-'n_channels': 2,
-'chunksize': 1024,
 'mapping': (1, 2),
 'channels': (
     {"name": "BeamShift X", "var": None, "default": 0},
-    {"name": "BeamShift Y", "var": None, "default": 0},
-)}
+    {"name": "BeamShift Y", "var": None, "default": 0})
+}
+
+# seems to work well
+cla1_mme = {**cla1_adat_base,
+**{'hostapi': 0} }
+
+   # strange timing issues, misses a lot
+cla1_ds = {**cla1_adat_base,
+**{'hostapi': 1} }
+
+# WASAPI was designed for low latency and bypasses the windows mixer in exclusive mode, works well
+cla1_wasapi = {**cla1_adat_base,
+**{'hostapi': 3} }
 
 # Do not use, clock is unreliable?
 # I get different values from stream.time and time.getBufferDacTime
 # maybe a different clock is used?
-settings_fireface_WDM_K5 = {
+cla1_wdm_ks = {
 'device': 'ADAT 1 (1+2) (Fireface ADAT 1 (1+2))',
-'global_volume': 1.0,
-'fs': 44100,
 'hostapi': 4,  # 'Windows WDM-KS', Windows Driver Model - Kernel Streaming
-'duration': 0.01,
-'n_channels': 2,
-'chunksize': 1024,
 'mapping': (1, 2),
 'channels': (
     {"name": "BeamShift X", "var": None, "default": 0},
-    {"name": "BeamShift Y", "var": None, "default": 0},
-)}
+    {"name": "BeamShift Y", "var": None, "default": 0})
+}
 
-settings_testing = {
+testing = {
 'device': None,
-'global_volume': 1.0,
-'fs': 44100,
-'duration': 1.0,
-'n_channels': 2,
-'chunksize': 1024,
 'mapping': (1,2),
 'channels': (
     {"name": "Channel 1", "var": None, "default": 0},
-    {"name": "Channel 2", "var": None, "default": 0}
-)}
+    {"name": "Channel 2", "var": None, "default": 0})
+}
 
-DEFAULT_SETTINGS = settings_fireface
-DEFAULT_SETTINGS = settings_asio_beamshift
-# DEFAULT_SETTINGS = settings_testing
+# default = testing
+# default = all_asio
+default = cla1_asio
+# default = cla1_mme
+# default = cla1_ds
+# default = cla1_wasapi
+# default = cla1_wdm_ks

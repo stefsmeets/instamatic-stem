@@ -5,7 +5,7 @@ from .beam_control import BeamCtrl
 
 from IPython import embed
 
-from .settings import DEFAULT_SETTINGS
+from .settings import default as default_settings
 from .experiment import get_coords
 
 
@@ -13,7 +13,7 @@ global_damping_factor = 100
 
 class BeamCtrlFrame(LabelFrame):
     """docstring for BeamCtrlFrame"""
-    def __init__(self, parent, settings=DEFAULT_SETTINGS):
+    def __init__(self, parent, settings=default_settings):
         LabelFrame.__init__(self, parent, text="Fine beam control")
         self.parent = parent
 

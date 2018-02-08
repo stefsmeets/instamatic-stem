@@ -167,7 +167,7 @@ def main():
     # Work-around for race condition (errors) that occurs when 
     # DataCollectionController tries to access them
 
-    from .settings import DEFAULT_SETTINGS as settings
+    from .settings import default as settings
     from .beam_control import BeamCtrl
     beam_ctrl = BeamCtrl(**settings)
 

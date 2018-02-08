@@ -53,10 +53,8 @@ class BeamCtrl(object):
     def __init__(self, 
         device=None,          # sounddevice to use, set to `None` to use default
         fs=44100,             # sampling rate, Hz, must be integer
-        duration=1.0,         # in seconds, may be float
-        global_volume=1.0,    # range [0.0, 1.0]
-        n_channels=2,         # number of channels
         mapping=(1,2),        # mapping of the channels
+        duration=1.0,         # in seconds, may be float
         blocksize=1024,       # number of frames per channel
         **kwargs
         ): 
@@ -85,18 +83,16 @@ class BeamCtrl(object):
 
         pprint(self.device_info)
 
-        self.fs            = fs           
+        self.fs            = self.device_info['default_samplerate']           
         self.duration      = duration     
-        self.global_volume = global_volume
-        self.n_channels    = n_channels   
+        self.n_channels    = len(mapping)
         self.mapping       = mapping
  
         self.dtype         = np.float32
 
-        blocksize          = int(ceil(fs*duration))
-        self.blocksize     = blocksize    
+        self.blocksize     = int(ceil(fs*duration))    
 
-        self.signal_data   = np.empty((blocksize, n_channels), dtype=self.dtype)
+        self.signal_data   = np.empty((self.blocksize, self.n_channels), dtype=self.dtype)
 
         self.channel_data   = None
 
@@ -112,8 +108,6 @@ class BeamCtrl(object):
     def get_signal(self, channel_data):
         n_channels = self.n_channels
 
-        global_volume = self.global_volume
-
         signal_data = self.signal_data
         
         # multichannel should be interweaved like this: L1R1L2R2L3R3L4R4 (8 channels)
@@ -122,7 +116,7 @@ class BeamCtrl(object):
         for channel in range(n_channels):
             # flat signal
             volume = channel_data[channel]
-            signal_data.reshape(-1)[channel::n_channels] = volume * global_volume
+            signal_data.reshape(-1)[channel::n_channels] = volume
 
         return signal_data
 
