@@ -102,7 +102,6 @@ def do_experiment(cam, strength,
     coords = get_coords(grid_x, grid_y, strength, rotation)
     gen_coords = signal_generator(coords)
 
-    starttime = monotonic()
     queue = deque()
     buffer = []
 
@@ -116,6 +115,7 @@ def do_experiment(cam, strength,
     cam.block()
 
     with stream:
+        starttime = stream.time
 
         while stream.active or len(queue):
             try:
