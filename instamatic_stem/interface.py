@@ -150,12 +150,19 @@ class BeamCtrlFrame(LabelFrame):
         if self.var_toggle_test.get():
             params = self.get_scanning_params()
             
-            coords = get_coords(**params)
             grid_x = params["grid_x"]
             grid_y = params["grid_y"]
+            coords = get_coords(**params).reshape(grid_y, grid_x, 2)
 
-            idx = 0, grid_x-1, -1, -grid_y
-            corners = coords.take(idx, 0)
+            corners = [
+            coords[ 0,  0],
+            coords[ 0, -1],
+            coords[-1, -1],
+            coords[-1,  0],
+            ]
+
+            plt.legend()
+            plt.show()
 
             self.beam_ctrl.do_box_scan(corners)
 
