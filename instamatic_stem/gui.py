@@ -1,19 +1,15 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from Tkinter import *
-from ttk import *
+from tkinter import *
+from tkinter.ttk import *
 
 import os, sys
 import traceback
-import numpy as np
-import json
 from instamatic.formats import *
 
 import time
 import logging
 
 import threading
-import Queue
+import queue
 
 import datetime
 from .experiment import get_coords
@@ -36,7 +32,7 @@ class DataCollectionController(object):
         self.beam_ctrl = beam_ctrl
         self.log = log
 
-        self.q = Queue.LifoQueue(maxsize=1)
+        self.q = queue.LifoQueue(maxsize=1)
         self.triggerEvent = threading.Event()
         
         self.module_scanning = self.stream.get_module("scanning")

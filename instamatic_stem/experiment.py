@@ -1,9 +1,6 @@
-from __future__ import print_function
-from __future__ import absolute_import
 import numpy as np
 import sounddevice as sd
 import threading
-import Queue
 import time
 from collections import deque, defaultdict
 from .monotonic import monotonic

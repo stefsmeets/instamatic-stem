@@ -1,12 +1,9 @@
-from __future__ import absolute_import
-from Tkinter import *
-from ttk import *
+from tkinter import *
+from tkinter.ttk import *
 
 from .beam_control import BeamCtrl
 
 from IPython import embed
-
-import numpy as np
 
 from .settings import DEFAULT_SETTINGS
 from .experiment import get_coords
@@ -14,7 +11,7 @@ from .experiment import get_coords
 
 global_damping_factor = 100
 
-class BeamCtrlFrame(object, LabelFrame):
+class BeamCtrlFrame(LabelFrame):
     """docstring for BeamCtrlFrame"""
     def __init__(self, parent, settings=DEFAULT_SETTINGS):
         LabelFrame.__init__(self, parent, text="Fine beam control")

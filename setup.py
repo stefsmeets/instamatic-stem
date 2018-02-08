@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
-from past.builtins import execfile
 from setuptools import setup, find_packages
 import os
 
 # www.pythonhosted.org/setuptools/setuptools.html
 
-execfile('instamatic_stem/version.py')  # grab __version__, __author__, etc.
+exec(open('instamatic_stem/version.py').read())  # grab __version__, __author__, etc.
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()

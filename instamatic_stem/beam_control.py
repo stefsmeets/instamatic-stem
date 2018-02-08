@@ -1,9 +1,6 @@
-from __future__ import print_function
-from __future__ import absolute_import
 import sounddevice as sd
 import numpy as np
 from math import ceil
-import time
 from collections import defaultdict
 
 from pprint import pprint
