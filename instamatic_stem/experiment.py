@@ -3,9 +3,12 @@ import sounddevice as sd
 import threading
 import time
 from collections import deque, defaultdict
-from .monotonic import monotonic
 
 from IPython import embed
+
+
+PREFILL = 5
+POSTFILL = 1
 
 
 def get_coords(grid_x=10, grid_y=10, strength=0.5, rotation=0.0, **kwargs):
@@ -25,7 +28,7 @@ def get_coords(grid_x=10, grid_y=10, strength=0.5, rotation=0.0, **kwargs):
     return np.dot(coords, r)
 
 
-def signal_generator(coords, pre_fill=5, post_fill=1):
+def signal_generator(coords, pre_fill=PREFILL, post_fill=POSTFILL):
     """Convert the coordinate signal array into a generator
     pre_fill and post_fill add some blocks before and after the signal
 
@@ -52,19 +55,19 @@ def do_experiment(cam, strength,
 
     print("starting experiment")
     print()
-    print("    Dwell time: {}".format(dwell_time))
-    print("    Exposure:   {}".format(exposure))
-    print("    Grid x:     {}".format(grid_x))
-    print("    Grid y:     {}".format(grid_y))
-    print("    Rotation:   {}".format(rotation))
-    print("    Strength:   {}".format(strength))
+    print(f"    Dwell time: {dwell_time}")
+    print(f"    Exposure:   {exposure}")
+    print(f"    Grid x:     {grid_x}")
+    print(f"    Grid y:     {grid_y}")
+    print(f"    Rotation:   {rotation}")
+    print(f"    Strength:   {strength}")
     print()
     blocksize = int(dwell_time * beam_ctrl.fs)
     block_duration = float(blocksize) / beam_ctrl.fs
-    print("    Blocksize:  {}".format(blocksize))
+    print(f"    Blocksize:  {blocksize}")
     print()
 
-    assert dwell_time > exposure, "Dwell time ({} s) must be larger than exposure ({} s)".format(dwell_time, exposure)
+    assert dwell_time > exposure, f"Dwell time ({dwell_time} s) must be larger than exposure ({exposure} s)"
 
 
     def callback(outdata, frames, streamtime, status):
@@ -80,7 +83,7 @@ def do_experiment(cam, strength,
             data.reshape(-1)[0::channels] = coord[0]
             data.reshape(-1)[1::channels] = coord[1]
         except StopIteration:
-            print("Stopping now!!")
+            # print("Stopping now!!")
             raise sd.CallbackStop
 
         if collect:
@@ -121,19 +124,23 @@ def do_experiment(cam, strength,
             try:
                 next_frame = queue.popleft()
             except IndexError:
-                print(" -> No frames, continuing!")
+                print(f" -> No frames @ {stream.time-starttime:6.3f}, continuing!")
                 time.sleep(dwell_time / 4)
                 continue
             else:
                 i += 1
 
-            diff = next_frame - stream.time
-            print("Waiting {:-6.1f} ms (current: {:-6.3f}, next: {:-6.3f})".format(1000*diff, stream.time - starttime, next_frame - starttime), end=' ')
+            stream_time = stream.time
+            frame_time = next_frame + stream.latency
+
+            diff = frame_time - stream_time
+
+            print(f"Waiting {1000*diff:-6.1f} ms (current: {stream.time-starttime:-6.3f} s, latency: {stream.latency:-6.3f}, next: {frame_time-starttime:-6.3f})", end=" ")
             if diff < 0:
                 if diff + dwell_time > exposure*1.5:
-                    print(" -> second chance", end=' ')
+                    print(" -> Second chance", end=' ')
                 else:
-                    print(" -> Missed the window, continuing! (latency: {})".format(stream.latency))
+                    print(" -> Missed the window")
                     missed.append(i)
                     buffer.append(empty)  # insert empty to maintain correct data shape
                     continue
@@ -141,7 +148,6 @@ def do_experiment(cam, strength,
                 time.sleep(diff)
             
             arr = cam.getImage(exposure)
-            # arr[i:i+10] = 0
             buffer.append(arr)
             print(" -> Image captured!")
 
@@ -152,19 +158,22 @@ def do_experiment(cam, strength,
         print()
         print("Scanning done!")
         print("Stream latency: {} s".format(stream.latency))
-        print("Average wait: {:.2f} +- {:.2f} ms".format(1000*np.mean(waiting_times[1:]), 1000*np.std(waiting_times[1:])))
+        print(f"Average wait: {1000*np.mean(waiting_times[1:]):.2f} +- {1000*np.std(waiting_times[1:]):.2f} ms")
 
     cam.unblock()
     t1 = time.clock()
 
-    print("Time taken: {:.1f} s ({} frames)".format(t1-t0, len(coords)))
-    print("Frametime: {:.1f} ms ({:.1f} fps)".format(1000*(t1-t0)/len(coords), len(coords)/(t1-t0)))
-    print("Missed frames: {} ({:.1%})".format(len(missed), float(len(missed))/len(coords)))
+    ntot = len(coords)
+    nmissed = len(missed)
+    dt = t1 - t0
+    print(f"Time taken: {dt:.1f} s ({ntot} frames)")
+    print(f"Frametime: {1000*(dt)/ntot:.1f} ms ({ntot/(dt):.1f} fps)")
+    print(f"Missed frames: {nmissed} ({nmissed/ntot:.1%})")
     buffer = np.stack(buffer)
     t = time.time()
-    fn = "scan_{}.npy".format(t)
-    np.save(fn, buffer)
-    print("Wrote buffer to", fn)
+    fn = f"scan_{t}.npy"
+    # np.save(fn, buffer)
+    print(f"Wrote buffer to {fn}")
 
     with open("scan_{}.txt".format(t), "w") as f:
         print(time.ctime(), file=f)
