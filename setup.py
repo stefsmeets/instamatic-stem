@@ -49,7 +49,8 @@ setup(
     entry_points={
         'console_scripts': [
             # main
-            'instamatic.stem = instamatic_stem.gui:main',
+            'instamatic.stem       = instamatic_stem.gui:main',
+            'instamatic.stem.nogui = instamatic_stem.experiment:main',
         ]
     }
 )

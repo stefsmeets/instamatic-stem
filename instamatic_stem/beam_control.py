@@ -73,8 +73,17 @@ class BeamCtrl(object):
         sd.default.latency = self.latency = 'low'
         # sd.default.latency = 0.1
 
-        pprint(sd.query_devices(self.device))
+        self.device_info = sd.query_devices(self.device)
 
+        if self.device_info['hostapi'] == 2:
+            asio_out = sd.AsioSettings(channel_selectors=mapping)
+            self.extra_settings = asio_out
+            sd.default.extra_settings = asio_out
+            mapping = list(range(1, len(mapping)+1))
+        else:
+            self.extra_settings = None
+
+        pprint(self.device_info)
 
         self.fs            = fs           
         self.duration      = duration     
@@ -92,7 +101,7 @@ class BeamCtrl(object):
         self.channel_data   = None
 
     def info(self):
-        return "fs: {}\ndevice: {}\nchannels: {}\ndtype: {}\nlatency: {}".format(self.fs, self.device, self.n_channels, self.dtype, self.latency)
+        return f"fs: {self.fs}\ndevice: {self.device}\nchannels: {self.n_channels}\ndtype: {self.dtype}\nlatency: {self.latency}"
 
     def set_duration(self, duration):
         self.duration      = duration     

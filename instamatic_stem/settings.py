@@ -2,6 +2,7 @@ settings_fireface_all = {
 'device': 'ASIO Fireface USB',
 'global_volume': 1.0,
 'fs': 44100,
+'hostapi': 2,  # asio
 'duration': 0.01,
 'n_channels': 8,
 'chunksize': 1024,
@@ -15,6 +16,20 @@ settings_fireface_all = {
     {"name": "ImageShift? Y", "var": None, "default": 0},
     {"name": "ImageTilt? X?", "var": None, "default": 0},
     {"name": "ImageTilt? Y?", "var": None, "default": 0}
+)}
+
+settings_asio_beamshift = {
+'device': 'ASIO Fireface USB',
+'global_volume': 1.0,
+'fs': 44100,
+'hostapi': 2,  # asio
+'duration': 0.01,
+'n_channels': 2,
+'chunksize': 1024,
+'mapping': (14,15),
+'channels': (
+    {"name": "BeamShift X", "var": None, "default": 0},
+    {"name": "BeamShift Y", "var": None, "default": 0},
 )}
 
 settings_fireface = {
@@ -63,5 +78,6 @@ settings_testing = {
     {"name": "Channel 2", "var": None, "default": 0}
 )}
 
-# DEFAULT_SETTINGS = settings_fireface
-DEFAULT_SETTINGS = settings_testing
+DEFAULT_SETTINGS = settings_fireface
+DEFAULT_SETTINGS = settings_asio_beamshift
+# DEFAULT_SETTINGS = settings_testing

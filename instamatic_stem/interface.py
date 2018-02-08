@@ -42,6 +42,8 @@ class BeamCtrlFrame(LabelFrame):
         Separator(frame, orient=HORIZONTAL).grid(row=1, columnspan=4, sticky="ew", pady=10)
 
         self.make_entry(frame, self.var_dwell_time, "Dwell time (s)", 5, 0, 0.01, 10.0, 0.01)
+        Label(frame, text="1024: 0.02322 | 2048: 0.04644").grid(row=5, column=2, columnspan=2, sticky="EW")
+
         self.make_entry(frame, self.var_exposure, "Exposure (s)", 6, 0, 0.01, 10.0, 0.01)
     
         self.make_slider(frame, self.var_strength, "Strength", 20, 0.0, 100.0, self.update_test_stream)

@@ -83,11 +83,13 @@ def do_experiment(cam, strength,
             data.reshape(-1)[0::channels] = coord[0]
             data.reshape(-1)[1::channels] = coord[1]
         except StopIteration:
-            # print("Stopping now!!")
+            print("\nStopping now!!")
             raise sd.CallbackStop
 
         if collect:
             queue.append(streamtime.outputBufferDacTime)
+        # else:
+            # print(f"Collect: False @ {streamtime.outputBufferDacTime:6.3f}")
 
         outdata[:] = data
 
@@ -95,12 +97,16 @@ def do_experiment(cam, strength,
 
     event = threading.Event()
 
-    stream = sd.OutputStream(
-            samplerate=beam_ctrl.fs, blocksize=blocksize, latency=beam_ctrl.latency,
-            device=beam_ctrl.device, channels=beam_ctrl.n_channels, dtype=beam_ctrl.dtype,
-            callback=callback, finished_callback=event.set, dither_off=True)
+    latency = beam_ctrl.latency
+    print(f"    Latency:  {latency}")
+    print()
 
-    # stream = beam_ctrl.get_output_stream(callback=callback, finished_callback=event.set, blocksize=blocksize)
+    # dither: Add random noise to make signal less determininistic, I assume we do not want this
+    stream = sd.OutputStream(
+            samplerate=beam_ctrl.fs, blocksize=blocksize, latency=latency,
+            device=beam_ctrl.device, channels=beam_ctrl.n_channels, dtype=beam_ctrl.dtype,
+            callback=callback, finished_callback=event.set, dither_off=True,
+            prime_output_buffers_using_stream_callback=True)
 
     coords = get_coords(grid_x, grid_y, strength, rotation)
     gen_coords = signal_generator(coords)
@@ -196,7 +202,7 @@ def do_experiment(cam, strength,
         print("Wrote info to", f.name)
 
 
-if __name__ == '__main__':
+def main():
     import psutil, os
     p = psutil.Process(os.getpid())
     p.nice(psutil.REALTIME_PRIORITY_CLASS)  # set python process as high priority
@@ -209,10 +215,14 @@ if __name__ == '__main__':
     cam = VideoStream("simulate")
 
     do_experiment(cam               = cam,
-                  dwell_time        = 0.03,
+                  dwell_time        = 0.05,
                   exposure          = 0.01,
-                  strength          = 1.0,
+                  strength          = 1.0 / 100,
                   grid_x            = 10,
                   grid_y            = 10,
                   rotation          = 0.0,
                   beam_ctrl         = beam_ctrl)
+    cam.close()
+
+if __name__ == '__main__':
+    main()
