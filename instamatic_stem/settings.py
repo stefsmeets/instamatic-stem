@@ -39,9 +39,11 @@ cla1_mme = {**cla1_adat_base,
 cla1_ds = {**cla1_adat_base,
 **{'hostapi': 1} }
 
-# WASAPI was designed for low latency and bypasses the windows mixer in exclusive mode, works well
+# WASAPI was designed for low latency and, works well
+# supposedly the exclusive mode bypasses the windows mixer, which reduced latency
 cla1_wasapi = {**cla1_adat_base,
-**{'hostapi': 3} }
+**{'hostapi': 3,
+   'exclusive': False} }
 
 # Do not use, clock is unreliable?
 # I get different values from stream.time and time.getBufferDacTime
@@ -64,9 +66,9 @@ testing = {
 }
 
 # default = testing
-# default = all_asio
-default = cla1_asio
+default = all_asio
+# default = cla1_asio
 # default = cla1_mme
 # default = cla1_ds
-# default = cla1_wasapi
+default = cla1_wasapi
 # default = cla1_wdm_ks

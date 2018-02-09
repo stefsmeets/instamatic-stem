@@ -74,10 +74,13 @@ class BeamCtrl(object):
         self.device_info = sd.query_devices(self.device)
 
         if self.device_info['hostapi'] == 2:
-            asio_out = sd.AsioSettings(channel_selectors=mapping)
-            self.extra_settings = asio_out
-            sd.default.extra_settings = asio_out
+            self.extra_settings = sd.AsioSettings(channel_selectors=mapping)
+            sd.default.extra_settings = self.extra_settings
             mapping = list(range(1, len(mapping)+1))
+        elif self.device_info['hostapi'] == 3:
+            exclusive = kwargs.get("exclusive", False)
+            self.extra_settings = sd.WasapiSettings(exclusive=exclusive)
+            sd.default.extra_settings = self.extra_settings
         else:
             self.extra_settings = None
 
