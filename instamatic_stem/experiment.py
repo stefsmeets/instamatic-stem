@@ -48,16 +48,20 @@ def do_experiment(cam, strength,
     exposure,
     beam_ctrl,
     blocksize=512,
-    latency=None,
+    stream_latency=None,
+    hardware_latency=0.0,
 	write_output=True,
     plot=False):
 
     channels = beam_ctrl.n_channels
     fs = beam_ctrl.fs
+    overhead = 0.01
 
     print("starting experiment")
     print()
     print(f"    Dwell time: {dwell_time}")
+    print(f"    Exposure:   {exposure}")
+    print(f"    Latency:    {stream_latency} + {hardware_latency}")
     print(f"    Exposure:   {exposure}")
     print(f"    Grid x:     {grid_x}")
     print(f"    Grid y:     {grid_y}")
@@ -72,6 +76,7 @@ def do_experiment(cam, strength,
     print(f"Block duration: {blocksize*ft:.3f} ms")
     print(f"N blocks: {nblocks}")
     print(f"Adjusted dwell time: {dwell_time:.3f} s @ {blocksize} frames/block")
+    print()
 
     assert dwell_time > exposure, f"Dwell time ({dwell_time} s) must be larger than exposure ({exposure} s)"
 
@@ -94,7 +99,7 @@ def do_experiment(cam, strength,
             raise sd.CallbackStop
 
         if collect:
-            # print(f"{streamtime.currentTime-starttime:.3f} - {streamtime.outputBufferDacTime-starttime:.3f}, {streamtime.outputBufferDacTime-streamtime.currentTime:.3f} ")
+            # print(f"{streamtime.currentTime-start_time:.3f} - {streamtime.outputBufferDacTime-start_time:.3f}, {streamtime.outputBufferDacTime-streamtime.currentTime:.3f} ")
             queue.append(streamtime.outputBufferDacTime)
         # else:
             # print(f"Collect: False @ {streamtime.outputBufferDacTime:6.3f}")
@@ -105,12 +110,18 @@ def do_experiment(cam, strength,
 
     event = threading.Event()
 
-    if not latency:
-        latency = beam_ctrl.latency
+    try:
+        stream_latency = float(stream_latency)
+    except TypeError:
+        if stream_latency is None:
+            stream_latency = beam_ctrl.latency
+    except ValueError:
+        # must be 'low' or 'high'
+        pass
 
     # dither: Add random noise to make signal less determininistic, I assume we do not want this
     stream = sd.OutputStream(
-            samplerate=fs, blocksize=blocksize, latency=latency,
+            samplerate=fs, blocksize=blocksize, latency=stream_latency,
             device=beam_ctrl.device, channels=beam_ctrl.n_channels, dtype=beam_ctrl.dtype,
             callback=callback, finished_callback=event.set, 
             extra_settings=beam_ctrl.extra_settings,
@@ -127,7 +138,7 @@ def do_experiment(cam, strength,
     dts = []
     frame_times = []
     missed = []
-    empty = np.zeros((516, 516))
+    empty = np.zeros((516, 516), dtype=np.uint16)
 
     i = 0
 
@@ -137,34 +148,32 @@ def do_experiment(cam, strength,
     cam.block()
 
     with stream:
-        starttime = stream.time
-        previous_frame_time = starttime
+        start_time = stream.time
+        previous_frame_time = start_time
 
         print(f"Reported stream latency: {stream.latency:.3f}")
-        print(f"Stream start time: {starttime:.3f}")
-
-        time.sleep(stream.latency)
+        print(f"Stream start time: {start_time:.3f}")
 
         while stream.active or len(queue):
             try:
                 next_frame = queue.popleft()
             except IndexError:
-                print(f" -> No frames @ {stream.time-starttime:6.3f}, continuing!")
-                time.sleep(stream.latency)
+                # print(f" -> No frames @ {stream.time-start_time:6.3f}, continuing!")
+                time.sleep(0.01)
                 continue
             else:
                 i += 1
 
             stream_time = stream.time
-            frame_time = next_frame + stream.latency
+            frame_time = next_frame + hardware_latency
 
             diff = frame_time - stream_time
-            print(f"Waiting {1000*diff:-6.1f} ms (current: {stream.time-starttime:-6.3f} s, next: {frame_time-starttime:-6.3f}, dt: {frame_time-previous_frame_time:-6.3f})", end=" ")
+            print(f"Waiting {diff:-6.3f} s (current: {stream_time-start_time:-6.3f}, next: {frame_time-start_time:-6.3f}, dt: {frame_time-previous_frame_time:-6.3f})", end=" ")
             dt = frame_time - previous_frame_time
             previous_frame_time = frame_time
             
             if diff < 0:
-                if diff + dwell_time > exposure*1.5:
+                if diff + dwell_time > exposure:
                     pass
                     print(" -> ...", end='')
                 else:
@@ -175,7 +184,7 @@ def do_experiment(cam, strength,
             else:
                 time.sleep(diff)
             
-            arr = cam.getImage(exposure)
+            arr = cam.getImage(exposure).astype(np.uint16)
             buffer.append(arr)
             print(" -> OK!")
 
@@ -183,8 +192,7 @@ def do_experiment(cam, strength,
             frame_times.append(frame_time)
             waiting_times.append(diff)
 
-        # time.sleep(1)
-        # event.wait()  # Wait until playback is finished
+        event.wait()  # Wait until playback is finished
 
     cam.unblock()
     t1 = time.clock()
@@ -243,14 +251,14 @@ def main():
     cam = VideoStream("simulate")
 
     do_experiment(cam               = cam,
-                  dwell_time        = 0.035,
+                  dwell_time        = 0.05,
                   exposure          = 0.01,
                   strength          = 1.0 / 100,
                   grid_x            = 10,
                   grid_y            = 10,
                   rotation          = 0.0,
-                  blocksize         = 32,
-                  latency           = 0.0,
+                  blocksize         = 1024,
+                  latency           = 0.2,
                   write_output      = False,
                   beam_ctrl         = beam_ctrl)
     cam.close()
