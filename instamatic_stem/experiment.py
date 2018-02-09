@@ -135,7 +135,7 @@ def do_experiment(cam, strength,
     buffer = []
 
     waiting_times = []
-    dts = []
+    frame_start_times = []
     frame_times = []
     missed = []
     empty = np.zeros((516, 516), dtype=np.uint16)
@@ -149,48 +149,54 @@ def do_experiment(cam, strength,
 
     with stream:
         start_time = stream.time
-        previous_frame_time = start_time
+        window_start = start_time
 
         print(f"Reported stream latency: {stream.latency:.3f}")
         print(f"Stream start time: {start_time:.3f}")
+        print()
 
         while stream.active or len(queue):
+            previous_window_start = window_start
+
             try:
-                next_frame = queue.popleft()
+                next_frame_time = queue.popleft()
             except IndexError:
                 # print(f" -> No frames @ {stream.time-start_time:6.3f}, continuing!")
-                time.sleep(0.01)
+                time.sleep(dwell_time / 2)
                 continue
             else:
                 i += 1
 
-            stream_time = stream.time
-            frame_time = next_frame + hardware_latency
+            print(f"{i:4d}", end=" ")
 
-            diff = frame_time - stream_time
-            print(f"Waiting {diff:-6.3f} s (current: {stream_time-start_time:-6.3f}, next: {frame_time-start_time:-6.3f}, dt: {frame_time-previous_frame_time:-6.3f})", end=" ")
-            dt = frame_time - previous_frame_time
-            previous_frame_time = frame_time
-            
-            if diff < 0:
-                if diff + dwell_time > exposure:
-                    pass
-                    print(" -> ...", end='')
-                else:
-                    print(" -> Missed the window")
-                    missed.append(i)
-                    buffer.append(empty)  # insert empty to maintain correct data shape
-                    continue
+            current_time = stream.time
+
+            window_start = next_frame_time + hardware_latency
+            window_end   = window_start + dwell_time
+
+            print(f"[ c: {current_time - start_time:.3f} | n: {window_start - start_time:.3f} | d: {window_start - previous_window_start:.3f} ] -> ", end=" ")
+
+            if current_time < window_start:
+                diff = window_start - current_time
+                print(f"Waiting: {diff:.3f} s", end=" ")
+                time.sleep(window_start - current_time)
+            elif current_time > window_end - exposure:
+                print(f"        +{current_time - window_start:.3f} s  -> Missed")
+                missed.append(i)
+                buffer.append(empty)  # insert empty to maintain correct data shape
+                continue
             else:
-                time.sleep(diff)
-            
+                print(f"        +{current_time - window_start:.3f} s", end=" ")
+
             arr = cam.getImage(exposure).astype(np.uint16)
             buffer.append(arr)
-            print(" -> OK!")
+            print(f" -> OK!    [ p: {stream.time - current_time:.3f} | r: {window_end - stream.time:+.3f} ]")
 
-            dts.append(dt)
+            frame_time = window_start - previous_window_start
+
             frame_times.append(frame_time)
-            waiting_times.append(diff)
+            frame_start_times.append(window_start)
+            waiting_times.append(window_start - current_time)
 
         event.wait()  # Wait until playback is finished
 
@@ -203,9 +209,9 @@ def do_experiment(cam, strength,
     print("Scanning done!")
     print(f"Stream latency:     {1000*stream.latency:.2f} ms")
     print(f"Average wait:       {1000*np.mean(waiting_times[1:]):.2f} +- {1000*np.std(waiting_times[1:]):.2f} ms")
-    print(f"Average frame time: {1000*np.mean(dts[1:]):.2f} +- {1000*np.std(dts[1:]):.2f} ms")
+    print(f"Average frame time: {1000*np.mean(frame_times[1:]):.2f} +- {1000*np.std(frame_times[1:]):.2f} ms")
     
-    dt = max(frame_times) - min(frame_times)
+    dt = max(frame_start_times) - min(frame_start_times)
     print(f"Time taken:         {dt:.1f} s ({ntot} frames)")
     print(f"Frametime:          {1000*(dt)/ntot:.1f} ms ({ntot/(dt):.1f} fps)")
     print(f"Missed frames:      {nmissed} ({nmissed/ntot:.1%})")
@@ -257,8 +263,9 @@ def main():
                   grid_x            = 10,
                   grid_y            = 10,
                   rotation          = 0.0,
-                  blocksize         = 1024,
-                  latency           = 0.2,
+                  blocksize         = 2048,
+                  stream_latency    = "high",
+                  hardware_latency  = 0.0,
                   write_output      = False,
                   beam_ctrl         = beam_ctrl)
     cam.close()

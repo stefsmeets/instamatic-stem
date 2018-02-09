@@ -66,9 +66,9 @@ testing = {
 }
 
 # default = testing
-default = all_asio
-# default = cla1_asio
+#default = all_asio
+default = cla1_asio
 # default = cla1_mme
 # default = cla1_ds
-default = cla1_wasapi
+# default = cla1_wasapi
 # default = cla1_wdm_ks
