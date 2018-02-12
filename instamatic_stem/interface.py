@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
-from .spinbox import Spinbox
+from instamatic.utils.spinbox import Spinbox
 
 from .beam_control import BeamCtrl
 
