@@ -116,10 +116,6 @@ class BeamCtrlFrame(LabelFrame):
         self.update_channels()
 
     def toggle_beam(self):
-        if self.var_toggle_test.get():
-            self.var_toggle_test.set(False)
-            self.beam_ctrl.stop()
-        
         toggle = self.var_toggle_beam.get()
 
         if toggle:
@@ -177,10 +173,6 @@ class BeamCtrlFrame(LabelFrame):
         return params
 
     def toggle_test_scanning(self, *args):
-        if self.var_toggle_beam.get():
-            self.var_toggle_beam.set(False)
-            self.beam_ctrl.stop()
-
         toggle = self.var_toggle_test.get()
         if toggle:
             self.update_test_stream()

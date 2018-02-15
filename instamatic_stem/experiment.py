@@ -218,6 +218,11 @@ def do_experiment(cam, strength,
     
     if write_output:
         t = time.time()
+
+        from instamatic.formats import write_tiff
+        for i, frame in enumerate(buffer):
+            write_tiff(f"{t}_{i:06d}.tiff", frame)
+
         buffer = np.stack(buffer)
         fn = f"scan_{t}.npy"
         np.save(fn, buffer)

@@ -171,7 +171,7 @@ def main():
     from .beam_control import BeamCtrl
     beam_ctrl = BeamCtrl(**settings)
 
-    stream = DataCollectionGUI(cam="simulate")
+    stream = DataCollectionGUI(cam="timepix")
 
     while not stream._modules_have_loaded:
         time.sleep(0.1)
