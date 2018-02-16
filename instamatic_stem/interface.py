@@ -4,8 +4,6 @@ from instamatic.utils.spinbox import Spinbox
 
 from .beam_control import BeamCtrl
 
-from IPython import embed
-
 from .settings import default as default_settings
 from .experiment import get_coords
 

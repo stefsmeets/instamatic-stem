@@ -3,8 +3,15 @@ import sounddevice as sd
 import threading
 import time
 from collections import deque, defaultdict
+import os, sys
 
-from IPython import embed
+import h5py as h5
+
+
+def printer(data):
+    """Print things to stdout on one line dynamically"""
+    sys.stdout.write("\r\x1b[K"+data.__str__())
+    sys.stdout.flush()
 
 
 def get_coords(grid_x=10, grid_y=10, strength=0.5, rotation=0.0, **kwargs):
@@ -219,14 +226,17 @@ def do_experiment(cam, strength,
     if write_output:
         t = time.time()
 
-        from instamatic.formats import write_tiff
-        for i, frame in enumerate(buffer):
-            write_tiff(f"{t}_{i:06d}.tiff", frame)
+        x, y = buffer[0].shape
+        dtype = buffer[0].dtype
+        fn = f"scan_{t}.h5"
+        f = h5.File(fn)
+        d = f.create_dataset("STEM-diffraction", shape=(len(buffer), x, y), dtype=dtype)
+        for i, arr in enumerate(buffer):
+            printer(f"{i} / {len(buffer)}")
+            d[i] = arr
+        f.close()
 
-        buffer = np.stack(buffer)
-        fn = f"scan_{t}.npy"
-        np.save(fn, buffer)
-        print(f"Wrote buffer to {fn}")
+        printer(f"Wrote buffer to {fn}\n")
     
         with open("scan_{}.txt".format(t), "w") as f:
             print(time.ctime(), file=f)
@@ -257,9 +267,10 @@ def main():
     from .settings import default
     from instamatic.camera.videostream import VideoStream
     from .beam_control import BeamCtrl
+    from instamatic import config
 
     beam_ctrl = BeamCtrl(**default)
-    cam = VideoStream("simulate")
+    cam = VideoStream(config.cfg.camera)
 
     do_experiment(cam               = cam,
                   dwell_time        = 0.05,

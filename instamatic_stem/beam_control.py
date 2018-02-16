@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from pprint import pprint
 
-from . import high_precision_timers
+from instamatic.utils import high_precision_timers
 high_precision_timers.enable()
 
 

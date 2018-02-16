@@ -126,13 +126,13 @@ class DataCollectionGUI(VideoStream):
         return self.modules[module]
 
     def saveImage(self):
-        module_io = self.get_module("io")
+        # module_io = self.get_module("io")
 
-        drc = module_io.get_experiment_directory()
-        if not os.path.exists(drc):
-            os.makedirs(drc)
+        # drc = module_io.get_experiment_directory()
+        # if not os.path.exists(drc):
+            # os.makedirs(drc)
         outfile = datetime.datetime.now().strftime("%Y%m%d-%H%M%S.%f") + ".tiff"
-        outfile = os.path.join(drc, outfile)
+        # outfile = os.path.join(drc, outfile)
 
         try:
             from instamatic.processing.flatfield import apply_flatfield_correction
@@ -171,7 +171,8 @@ def main():
     from .beam_control import BeamCtrl
     beam_ctrl = BeamCtrl(**settings)
 
-    stream = DataCollectionGUI(cam="timepix")
+    from instamatic import config
+    stream = DataCollectionGUI(cam=config.cfg.camera)
 
     while not stream._modules_have_loaded:
         time.sleep(0.1)
