@@ -82,17 +82,17 @@ class BeamCtrlFrame(LabelFrame):
     def init_vars(self):
         for channel in self.channels:
             channel["var"] = DoubleVar(value=channel["default"])
-            channel["var"].trace("w", self.update_channels)
+            channel["var"].trace_add("write", self.update_channels)
 
         self.var_damping = DoubleVar(value=50.0)
-        self.var_damping.trace("w", self.update_channels)
+        self.var_damping.trace_add("write", self.update_channels)
 
         self.var_toggle_beam   = BooleanVar(value=False)
 
         self.var_dwell_time    = DoubleVar(value=0.05)
-        self.var_dwell_time.trace("w", self.update_dwell_time)
+        self.var_dwell_time.trace_add("write", self.update_dwell_time)
         self.var_blocksize     = IntVar(value=512)
-        self.var_blocksize.trace("w", self.update_dwell_time)
+        self.var_blocksize.trace_add("write", self.update_dwell_time)
         self.var_actual_dwell_time = StringVar(value="")
         
         self.var_stream_latency   = StringVar(value="low")
@@ -100,11 +100,11 @@ class BeamCtrlFrame(LabelFrame):
 
         self.var_exposure      = DoubleVar(value=0.01)
         self.var_grid_x        = IntVar(value=10)
-        self.var_grid_x.trace("w", self.update_test_stream)
+        self.var_grid_x.trace_add("write", self.update_test_stream)
         self.var_grid_y        = IntVar(value=10)
-        self.var_grid_y.trace("w", self.update_test_stream)
+        self.var_grid_y.trace_add("write", self.update_test_stream)
         self.var_strength      = DoubleVar(value=50.0)
-        self.var_strength.trace("w", self.update_test_stream)
+        self.var_strength.trace_add("write", self.update_test_stream)
         self.var_rotation      = DoubleVar(value=0.0)
         self.var_toggle_test   = BooleanVar(value=False)
 
