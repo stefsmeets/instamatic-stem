@@ -106,7 +106,6 @@ def do_experiment(cam, strength,
             data.reshape(-1)[0::channels] = coord[0]
             data.reshape(-1)[1::channels] = coord[1]
         except StopIteration:
-            print("\nStopping now!!")
             raise sd.CallbackStop
 
         if collect:
@@ -155,9 +154,12 @@ def do_experiment(cam, strength,
 
     time.sleep(0.25)
 
-    t0 = time.clock()
     if gui:
         cam.block()
+        sw_interval = sys.getswitchinterval()
+        # Lower switch interval for faster switching of threads
+        # This significantly reduces 'missed frames'
+        sys.setswitchinterval(0.001)
 
     with stream:
         start_time = stream.time
@@ -179,30 +181,32 @@ def do_experiment(cam, strength,
             else:
                 i += 1
 
-            print(f"{i:4d}", end=" ")
+            s = f"\r {i:4d} "
 
             current_time = stream.time
 
             window_start = next_frame_time + hardware_latency
             window_end   = window_start + dwell_time
 
-            print(f"[ c: {current_time - start_time:.3f} | n: {window_start - start_time:.3f} | d: {window_start - previous_window_start:.3f} ] -> ", end=" ")
+            s += f"[ c: {current_time - start_time:.3f} | n: {window_start - start_time:.3f} | d: {window_start - previous_window_start:.3f} ] -> "
 
             if current_time < window_start:
                 diff = window_start - current_time
-                print(f"Waiting: {diff:.3f} s", end=" ")
+                s += f"Waiting: {diff:.3f} s"
                 time.sleep(window_start - current_time)
             elif current_time > window_end - exposure:
-                print(f"        +{current_time - window_start:.3f} s  -> Missed")
+                s += f"        +{current_time - window_start:.3f} s -> Miss :( "
                 missed.append(i)
                 buffer.append(empty)  # insert empty to maintain correct data shape
+                print(s, end='')
                 continue
             else:
-                print(f"        +{current_time - window_start:.3f} s", end=" ")
+                s += f"        +{current_time - window_start:.3f} s"
 
             arr = cam.getImage(exposure).astype(np.uint16)
             buffer.append(arr)
-            print(f" -> OK!    [ p: {stream.time - current_time:.3f} | r: {window_end - stream.time:+.3f} ]")
+            s += f" -> OK!     [ Miss: {len(missed)} ]"
+            print(s, end='')
 
             frame_time = window_start - previous_window_start
 
@@ -214,7 +218,7 @@ def do_experiment(cam, strength,
 
     if gui:
         cam.unblock()
-    t1 = time.clock()
+        sys.setswitchinterval(sw_interval)
 
     ntot = len(coords)
     nmissed = len(missed)
