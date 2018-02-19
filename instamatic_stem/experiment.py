@@ -58,11 +58,11 @@ def do_experiment(cam, strength,
     stream_latency=None,
     hardware_latency=0.0,
 	write_output=True,
-    plot=False):
+    plot=False,
+    gui=True):
 
     channels = beam_ctrl.n_channels
     fs = beam_ctrl.fs
-    overhead = 0.01
 
     print("starting experiment")
     print()
@@ -77,6 +77,10 @@ def do_experiment(cam, strength,
     print()
 
     ft = 1/fs
+
+    if blocksize == 0:
+        blocksize = int(dwell_time / ft)
+
     nblocks = int((dwell_time / ft) // blocksize)
     dwell_time = ft*blocksize*nblocks
 
@@ -152,7 +156,8 @@ def do_experiment(cam, strength,
     time.sleep(0.25)
 
     t0 = time.clock()
-    cam.block()
+    if gui:
+        cam.block()
 
     with stream:
         start_time = stream.time
@@ -207,7 +212,8 @@ def do_experiment(cam, strength,
 
         event.wait()  # Wait until playback is finished
 
-    cam.unblock()
+    if gui:
+        cam.unblock()
     t1 = time.clock()
 
     ntot = len(coords)
@@ -266,25 +272,25 @@ def main():
 
     from .settings import default
     from instamatic.camera.videostream import VideoStream
+    from instamatic.camera import Camera
     from .beam_control import BeamCtrl
     from instamatic import config
+    import yaml
 
     beam_ctrl = BeamCtrl(**default)
-    cam = VideoStream(config.cfg.camera)
+    cam = Camera(config.cfg.camera)
+
+    args = sys.argv[1:]
+    if not args:
+        print("Usage: instamatic.stem.nogui input.yaml")
+        sys.exit()
+
+    kwargs = yaml.load(open(args[0], "r"))
 
     do_experiment(cam               = cam,
-                  dwell_time        = 0.05,
-                  exposure          = 0.01,
-                  strength          = 1.0 / 100,
-                  grid_x            = 10,
-                  grid_y            = 10,
-                  rotation          = 0.0,
-                  blocksize         = 2048,
-                  stream_latency    = "high",
-                  hardware_latency  = 0.0,
-                  write_output      = False,
-                  beam_ctrl         = beam_ctrl)
-    cam.close()
+                  beam_ctrl         = beam_ctrl,
+                  gui               = False,
+                  **kwargs)
 
 if __name__ == '__main__':
     main()

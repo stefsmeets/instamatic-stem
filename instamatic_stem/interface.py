@@ -41,7 +41,7 @@ class BeamCtrlFrame(LabelFrame):
         self.make_entry(frame, self.var_dwell_time, "Dwell time (s)", 5, 0, 0.01, 10.0, 0.01)
         Label(frame, textvariable=self.var_actual_dwell_time).grid(row=5, column=2, columnspan=2, sticky="EW")
         
-        blocksizes = [16, 32, 64, 128, 256, 512, 1024, 2048]
+        blocksizes = [0, 16, 32, 64, 128, 256, 512, 1024, 2048]
         Label(frame, text="Blocksize").grid(row=6, column=0, sticky="EW")
         Combobox(frame, width=10, textvariable=self.var_blocksize, values=blocksizes).grid(row=6, column=1, sticky="EW", padx=5, pady=2.5)
         
@@ -61,7 +61,8 @@ class BeamCtrlFrame(LabelFrame):
         self.make_entry(frame, self.var_grid_y, "Grid y", 30, 2, 2, 100, 1)
 
         Checkbutton(frame, text="Show perimeter", variable=self.var_toggle_test, command=self.toggle_test_scanning).grid(row=40, column=0, sticky="EW")
-        Button(frame, text="Plot coords", command=self.show_grid_plot).grid(row=40, column=2, sticky="EW", padx=5, pady=2.5)
+        Button(frame, text="Plot coords", command=self.show_grid_plot).grid(row=40, column=1, sticky="EW", padx=5, pady=2.5)
+        Button(frame, text="Save variables", command=self.to_yaml).grid(row=40, column=2, sticky="EW", padx=5, pady=2.5)
         Button(frame, text="Scan!", command=self.start_scanning).grid(row=40, column=3, sticky="EW", padx=5, pady=2.5)
 
         frame.pack(side="top", fill="x", padx=10, pady=10)
@@ -130,8 +131,13 @@ class BeamCtrlFrame(LabelFrame):
         try:
             dwell_time = self.var_dwell_time.get()
             blocksize = self.var_blocksize.get()
+
             fs = 44100
             ft = 1/fs
+            
+            if blocksize == 0:
+                 blocksize = int(dwell_time / ft)
+
             nblocks = int((dwell_time / ft) // blocksize)
             dwell_time = ft*blocksize*nblocks
             self.var_actual_dwell_time.set(f" -> {dwell_time:.3f} s @ {blocksize} (n={nblocks})")
@@ -212,6 +218,15 @@ class BeamCtrlFrame(LabelFrame):
         params = self.get_scanning_params()
         self.q.put(("plot_scan_grid", params))
         self.triggerEvent.set()
+
+    def to_yaml(self, *args):
+        import yaml
+        from pathlib import Path
+        params = self.get_scanning_params()
+        params.pop("beam_ctrl")
+        outfile = "input.yaml"
+        yaml.dump(params, stream=open(outfile, "w"), default_flow_style=False)
+        print(f"Wrote file: {Path(outfile).absolute()}")
 
 
 def run_gui(settings, beam_ctrl):
