@@ -5,6 +5,8 @@ import time
 from collections import deque, defaultdict
 import os, sys
 from pathlib import Path
+from instamatic.formats import write_tiff
+
 
 import h5py as h5
 
@@ -240,15 +242,15 @@ def do_experiment(cam, strength,
     if not expdir:
         expdir = Path.cwd()
     write_output = True
-    write_hdf5 = True
-    write_tiff = False
+    write_to_hdf5 = True
+    write_to_tiff = False
     if write_output:
-        if write_tiff:
-            from instamatic.formats import write_tiff
+        if write_to_tiff:
             for i, arr in enumerate(buffer):
                 write_tiff(expdir / f"{i:04d}.tiff", arr)
                 printer(f"{i} / {len(buffer)}")
-        if write_hdf5:
+        
+        if write_to_hdf5:
             x, y = buffer[0].shape
             dtype = buffer[0].dtype
             fn = expdir / f"data.h5"
@@ -260,7 +262,16 @@ def do_experiment(cam, strength,
             f.close()
     
             printer(f"Wrote buffer to {fn}\n")
-    
+
+        im = np.zeros((grid_x, grid_y))
+        im_view = im.ravel()
+        for i, arr in enumerate(buffer):
+            im_view[i] = arr.sum()
+
+        image_fn = expdir / "image.tiff"
+        write_tiff(expdir / image_fn, im)
+        print(f"Wrote image to {image_fn}")
+
         with open(expdir / "scan_log.txt", "w") as f:
             print(time.ctime(), file=f)
             print(file=f)
