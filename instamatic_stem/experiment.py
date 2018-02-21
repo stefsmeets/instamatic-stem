@@ -4,6 +4,7 @@ import threading
 import time
 from collections import deque, defaultdict
 import os, sys
+from pathlib import Path
 
 import h5py as h5
 
@@ -57,7 +58,7 @@ def do_experiment(cam, strength,
     blocksize=512,
     stream_latency=None,
     hardware_latency=0.0,
-	write_output=True,
+    expdir=None,
     plot=False,
     gui=True):
 
@@ -99,7 +100,10 @@ def do_experiment(cam, strength,
         if status.output_underflow:
             print('Output underflow: reduce exposure?')
             raise sd.CallbackAbort
-        assert not status
+        elif status.priming_output:
+            pass
+        else:
+            assert not status, str(status)
 
         try:
             collect, coord = next(gen_coords)
@@ -205,7 +209,7 @@ def do_experiment(cam, strength,
 
             arr = cam.getImage(exposure).astype(np.uint16, copy=False)  # copy=False ensures that no copy is made if dtype is already satisfied
             buffer.append(arr)
-            s += f" -> OK!     [ Miss: {len(missed)} ]"
+            s += f" -> OK!     [ Miss: {len(missed)} ]         "
             print(s, end='')
 
             frame_time = window_start - previous_window_start
@@ -233,18 +237,21 @@ def do_experiment(cam, strength,
     print(f"Frametime:          {1000*(dt)/ntot:.1f} ms ({ntot/(dt):.1f} fps)")
     print(f"Missed frames:      {nmissed} ({nmissed/ntot:.1%})")
     
+	if not expdir:
+		expdir = Path.cwd()
+    write_output = True
+	write_hdf5 = True
+	write_tiff = False
     if write_output:
-        t = time.time()
-
-        if False:
+        if write_tiff:
             from instamatic.formats import write_tiff
             for i, arr in enumerate(buffer):
-                write_tiff(f"{i:04d}.tiff", arr)
+                write_tiff(expdir / f"{i:04d}.tiff", arr)
                 printer(f"{i} / {len(buffer)}")
-        if True:
+        if write_hdf5:
             x, y = buffer[0].shape
             dtype = buffer[0].dtype
-            fn = f"scan_{t}.h5"
+            fn = expdir / f"data.h5"
             f = h5.File(fn)
             d = f.create_dataset("STEM-diffraction", shape=(len(buffer), x, y), dtype=dtype)
             for i, arr in enumerate(buffer):
@@ -254,7 +261,7 @@ def do_experiment(cam, strength,
     
             printer(f"Wrote buffer to {fn}\n")
     
-        with open("scan_{}.txt".format(t), "w") as f:
+        with open(expdir / "scan_log.txt", "w") as f:
             print(time.ctime(), file=f)
             print(file=f)
             print("dwell_time:", dwell_time, file=f)
@@ -272,6 +279,7 @@ def do_experiment(cam, strength,
             print("Coords", file=f)
             print(str(coords), file=f)
             print(file=f)
+
             print("Wrote info to", f.name)
 
 

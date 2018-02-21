@@ -2,18 +2,18 @@ from tkinter import *
 from tkinter.ttk import *
 from instamatic.utils.spinbox import Spinbox
 
-from .beam_control import BeamCtrl
+from ..beam_control import BeamCtrl
 
-from .settings import default as default_settings
-from .experiment import get_coords
+from ..settings import default as default_settings
+from ..experiment import get_coords
 
 
 global_damping_factor = 100
 
-class BeamCtrlFrame(LabelFrame):
+class STEMFrame(LabelFrame):
     """docstring for BeamCtrlFrame"""
     def __init__(self, parent, settings=default_settings):
-        LabelFrame.__init__(self, parent, text="Fine beam control")
+        LabelFrame.__init__(self, parent, text="Set up a raster scan")
         self.parent = parent
 
         self.beam_ctrl = None
@@ -22,21 +22,6 @@ class BeamCtrlFrame(LabelFrame):
         self.init_vars()
 
         frame = Frame(self)
-
-        Checkbutton(frame, text="Enable", variable=self.var_toggle_beam, command=self.toggle_beam).grid(row=5, column=0, sticky="W")
-        Button(frame, text="Reset", command=self.reset_channels).grid(row=5, column=1, sticky="W")
-
-        for i, channel in enumerate(self.channels):
-            self.make_slider(frame, channel["var"], channel["name"], 10+i, -100, 100, self.update_channels)
-
-        self.make_slider(frame, self.var_damping, "Strength", 101, 0, 100, self.update_channels)
-
-        frame.pack(side="top", fill="x", padx=10, pady=10)
-        frame.columnconfigure(2, weight=1)
-
-        frame = Frame(self)
-
-        Separator(frame, orient=HORIZONTAL).grid(row=1, columnspan=4, sticky="ew", pady=10)
 
         self.make_entry(frame, self.var_dwell_time, "Dwell time (s)", 5, 0, 0.01, 10.0, 0.01)
         Label(frame, textvariable=self.var_actual_dwell_time).grid(row=5, column=2, columnspan=2, sticky="EW")
@@ -81,15 +66,6 @@ class BeamCtrlFrame(LabelFrame):
         e.grid(row=row, column=column+1, sticky="EW", padx=5, pady=2.5)
 
     def init_vars(self):
-        for channel in self.channels:
-            channel["var"] = DoubleVar(value=channel["default"])
-            channel["var"].trace_add("write", self.update_channels)
-
-        self.var_damping = DoubleVar(value=50.0)
-        self.var_damping.trace_add("write", self.update_channels)
-
-        self.var_toggle_beam   = BooleanVar(value=False)
-
         self.var_dwell_time    = DoubleVar(value=0.05)
         self.var_dwell_time.trace_add("write", self.update_dwell_time)
         self.var_blocksize     = IntVar(value=1024)
@@ -108,20 +84,6 @@ class BeamCtrlFrame(LabelFrame):
         self.var_strength.trace_add("write", self.update_test_stream)
         self.var_rotation      = DoubleVar(value=0.0)
         self.var_toggle_test   = BooleanVar(value=False)
-
-    def reset_channels(self):
-        for channel in self.channels:
-            channel["var"].set(channel["default"])
-        self.update_channels()
-
-    def toggle_beam(self):
-        toggle = self.var_toggle_beam.get()
-
-        if toggle:
-            self.update_channels()
-            self.beam_ctrl.play()
-        else:
-            self.beam_ctrl.stop()
 
     def set_trigger(self, trigger=None, q=None):
         self.triggerEvent = trigger
@@ -143,25 +105,6 @@ class BeamCtrlFrame(LabelFrame):
             self.var_actual_dwell_time.set(f" -> {dwell_time:.3f} s @ {blocksize} (n={nblocks})")
         except:
             pass
-
-    def update_channels(self, *args):
-        # print "\nupdated", time.clock()
-        try:
-            channel_data = self.get_channel_data()
-        except ValueError as e:
-            return
-        if self.beam_ctrl:
-            self.beam_ctrl.update(channel_data)
-
-    def get_channel_data(self):
-        channel_data = []
-        damping = self.var_damping.get() / (100.0 * global_damping_factor)
-
-        for channel in self.channels:
-            val = channel["var"].get()
-            channel_data.append(damping*val / 100.0)
-
-        return channel_data
 
     def get_scanning_params(self):
         params = { "dwell_time": self.var_dwell_time.get(),
@@ -187,8 +130,6 @@ class BeamCtrlFrame(LabelFrame):
     def stop(self):
         if self.var_toggle_test.get():
             self.var_toggle_test.set(False)
-        if self.var_toggle_beam.get():
-            self.var_toggle_beam.set(False)
         self.beam_ctrl.stop()
 
     def update_test_stream(self, *args):
@@ -229,36 +170,11 @@ class BeamCtrlFrame(LabelFrame):
         print(f"Wrote file: {Path(outfile).absolute()}")
 
 
-def run_gui(settings, beam_ctrl):
-    root = Tk()
-    BeamCtrlFrame(root, settings=settings, beam_ctrl=beam_ctrl).pack(side="top", fill="both", expand=True)
-    root.mainloop()
-
-
 if __name__ == '__main__':
-    settings = settings_testing
-    # settings = settings_fireface
+    from ..settings import default_settings as settings
 
     beam = BeamCtrl(**settings)
 
-
-
-    run_gui(settings, beam)
-
-
-
-    # do_scan_lab6(beam)
-
-
-
-    # run_gui(settings, beam)
-    
-
-
-    # app = App(settings=settings)
-    # beam = app.beam_ctrl
-
-    # embed(banner1="")
-
-    # app.close()
-
+    root = Tk()
+    BeamCtrlFrame(root, settings=settings, beam_ctrl=beam_ctrl).pack(side="top", fill="both", expand=True)
+    root.mainloop()

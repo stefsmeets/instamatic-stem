@@ -12,15 +12,12 @@ import threading
 import queue
 
 import datetime
-from .experiment import get_coords
+from ..experiment import get_coords
 
 from instamatic.camera.videostream import VideoStream
 
 from collections import namedtuple
-from .interface import BeamCtrlFrame
-Module = namedtuple('Module', ['name', 'display_name', 'tabbed', 'tk_frame'])
-
-MODULES = Module("scanning", "scanning", False, BeamCtrlFrame),
+from .modules import MODULES
 
 
 class DataCollectionController(object):
@@ -35,10 +32,15 @@ class DataCollectionController(object):
         self.q = queue.LifoQueue(maxsize=1)
         self.triggerEvent = threading.Event()
         
+        self.module_io = self.stream.get_module("io")
+        
         self.module_scanning = self.stream.get_module("scanning")
-
         self.module_scanning.set_trigger(trigger=self.triggerEvent, q=self.q)
         self.module_scanning.beam_ctrl = beam_ctrl
+
+        self.module_beam = self.stream.get_module("beam")
+        self.module_beam.set_trigger(trigger=self.triggerEvent, q=self.q)
+        self.module_beam.beam_ctrl = beam_ctrl
 
         self.exitEvent = threading.Event()
         self.stream._atexit_funcs.append(self.exitEvent.set)
@@ -70,7 +72,13 @@ class DataCollectionController(object):
                 self.log.exception(e)
 
     def acquire_data_scanning(self, **kwargs):
-        from .experiment import do_experiment
+        from ..experiment import do_experiment
+
+        expdir = self.module_io.get_new_experiment_directory()
+        expdir.mkdir(exist_ok=True, parents=True)
+
+        kwargs["expdir"] = expdir
+
         do_experiment(self.stream, **kwargs)
         
         # from experiment import do_experiment_continuous
@@ -100,7 +108,9 @@ class DataCollectionGUI(VideoStream):
         frame = Frame(master)
         frame.pack(side="right", fill="both", expand="yes")
 
-        # self.nb = Notebook(frame, padding=10)
+        make_notebook = any(module.tabbed for module in MODULES)
+        if make_notebook:
+            self.nb = Notebook(frame, padding=10)
 
         for module in MODULES:
             if module.tabbed:
@@ -114,7 +124,8 @@ class DataCollectionGUI(VideoStream):
                 module_frame.pack(side="top", fill="both", expand="yes", padx=10, pady=10)
                 self.modules[module.name] = module_frame
 
-        # self.nb.pack(fill="both", expand="yes")
+        if make_notebook:
+            self.nb.pack(fill="both", expand="yes")
 
         btn = Button(master, text="Save image",
             command=self.saveImage)
@@ -167,8 +178,8 @@ def main():
     # Work-around for race condition (errors) that occurs when 
     # DataCollectionController tries to access them
 
-    from .settings import default as settings
-    from .beam_control import BeamCtrl
+    from ..settings import default as settings
+    from ..beam_control import BeamCtrl
     beam_ctrl = BeamCtrl(**settings)
 
     from instamatic import config
