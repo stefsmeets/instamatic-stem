@@ -9,8 +9,6 @@ from instamatic.utils import high_precision_timers
 high_precision_timers.enable()
 
 
-
-
 def get_device_id(device, hostapi, kind="output"):
     if kind == "output":
         key = "max_output_channels"
@@ -38,8 +36,8 @@ def ramp(start, end, fs, duration):
     """
 
     n_channels = start.size
-    n_samples = ceil(fs*duration)
-    length = ceil(n_samples*n_channels)
+    n_samples = ceil(fs * duration)
+    length = ceil(n_samples * n_channels)
     signal = np.empty(int(length), dtype=np.float32).reshape(-1, n_channels)
 
     for channel in range(n_channels):
@@ -50,24 +48,24 @@ def ramp(start, end, fs, duration):
 
 class BeamCtrl(object):
     """docstring for BeamCtrl"""
-    def __init__(self, 
-        device=None,          # sounddevice to use, set to `None` to use default
-        fs=44100,             # sampling rate, Hz, must be integer
-        mapping=(1,2),        # mapping of the channels
-        duration=1.0,         # in seconds, may be float
-        blocksize=1024,       # number of frames per channel
-        **kwargs
-        ): 
-        super(BeamCtrl, self).__init__()
 
+    def __init__(self,
+                 device=None,          # sounddevice to use, set to `None` to use default
+                 fs=44100,             # sampling rate, Hz, must be integer
+                 mapping=(1, 2),        # mapping of the channels
+                 duration=1.0,         # in seconds, may be float
+                 blocksize=1024,       # number of frames per channel
+                 **kwargs
+                 ):
+        super(BeamCtrl, self).__init__()
 
         hostapi = kwargs.get("hostapi", -1)
         if hostapi >= 0:
             device = get_device_id(device, hostapi)
 
-        sd.default.device  = device
-    
-        self.device        = sd.default.device[1]
+        sd.default.device = device
+
+        self.device = sd.default.device[1]
         sd.default.latency = self.latency = 'low'
         # sd.default.latency = 0.1
 
@@ -76,7 +74,7 @@ class BeamCtrl(object):
         if self.device_info['hostapi'] == 2:
             self.extra_settings = sd.AsioSettings(channel_selectors=mapping)
             sd.default.extra_settings = self.extra_settings
-            mapping = list(range(1, len(mapping)+1))
+            mapping = list(range(1, len(mapping) + 1))
         elif self.device_info['hostapi'] == 3:
             exclusive = kwargs.get("exclusive", False)
             self.extra_settings = sd.WasapiSettings(exclusive=exclusive)
@@ -86,14 +84,14 @@ class BeamCtrl(object):
 
         pprint(self.device_info)
 
-        self.fs            = self.device_info['default_samplerate']           
-        self.duration      = duration     
-        self.n_channels    = len(mapping)
-        self.mapping       = mapping
- 
-        self.dtype         = np.float32
+        self.fs = self.device_info['default_samplerate']
+        self.duration = duration
+        self.n_channels = len(mapping)
+        self.mapping = mapping
 
-        self.blocksize     = int(ceil(fs*duration))    
+        self.dtype = np.float32
+
+        self.blocksize     = int(ceil(fs * duration))    
 
         self.signal_data   = np.empty((self.blocksize, self.n_channels), dtype=self.dtype)
 
@@ -103,19 +101,19 @@ class BeamCtrl(object):
         return f"fs: {self.fs}\ndevice: {self.device}\nchannels: {self.n_channels}\ndtype: {self.dtype}\nlatency: {self.latency}"
 
     def set_duration(self, duration):
-        self.duration      = duration     
-        blocksize          = int(ceil(fs*duration))
-        self.blocksize     = blocksize    
+        self.duration      = duration
+        blocksize          = int(ceil(fs * duration))
+        self.blocksize     = blocksize
         self.signal_data   = np.empty((blocksize, n_channels), dtype=self.dtype)
 
     def get_signal(self, channel_data):
         n_channels = self.n_channels
 
         signal_data = self.signal_data
-        
+
         # multichannel should be interweaved like this: L1R1L2R2L3R3L4R4 (8 channels)
         # https://zach.se/generate-audio-with-python/
-        
+
         for channel in range(n_channels):
             # flat signal
             volume = channel_data[channel]
@@ -161,7 +159,7 @@ class BeamCtrl(object):
         fs = self.fs
         mapping = self.mapping
         ramps = []
-        
+
         for i in range(slices):
             start = o + (x-o)*i/float(slices)
             end = start + (y-o)

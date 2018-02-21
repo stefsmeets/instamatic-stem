@@ -11,7 +11,7 @@ VERSION = (0, 1, 0)
 
 __version__ = "{}.{}.{}".format(*VERSION)
 __title__ = "instamatic-STEM"
-__long_title__ = "{} v{}".format(__title__, __version__)
+__long_title__ = f"{__title__} v{__version__}"
 __author__ = "Stef Smeets"
 __author_email__ = "stef.smeets@mmk.su.se"
 __description__ = "Scanning diffraction tool"

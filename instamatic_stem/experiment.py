@@ -237,11 +237,11 @@ def do_experiment(cam, strength,
     print(f"Frametime:          {1000*(dt)/ntot:.1f} ms ({ntot/(dt):.1f} fps)")
     print(f"Missed frames:      {nmissed} ({nmissed/ntot:.1%})")
     
-	if not expdir:
-		expdir = Path.cwd()
+    if not expdir:
+        expdir = Path.cwd()
     write_output = True
-	write_hdf5 = True
-	write_tiff = False
+    write_hdf5 = True
+    write_tiff = False
     if write_output:
         if write_tiff:
             from instamatic.formats import write_tiff
