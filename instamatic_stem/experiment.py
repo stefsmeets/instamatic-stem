@@ -203,7 +203,7 @@ def do_experiment(cam, strength,
             else:
                 s += f"        +{current_time - window_start:.3f} s"
 
-            arr = cam.getImage(exposure).astype(np.uint16)
+            arr = cam.getImage(exposure).astype(np.uint16, copy=False)  # copy=False ensures that no copy is made if dtype is already satisfied
             buffer.append(arr)
             s += f" -> OK!     [ Miss: {len(missed)} ]"
             print(s, end='')
@@ -236,17 +236,23 @@ def do_experiment(cam, strength,
     if write_output:
         t = time.time()
 
-        x, y = buffer[0].shape
-        dtype = buffer[0].dtype
-        fn = f"scan_{t}.h5"
-        f = h5.File(fn)
-        d = f.create_dataset("STEM-diffraction", shape=(len(buffer), x, y), dtype=dtype)
-        for i, arr in enumerate(buffer):
-            printer(f"{i} / {len(buffer)}")
-            d[i] = arr
-        f.close()
-
-        printer(f"Wrote buffer to {fn}\n")
+        if False:
+            from instamatic.formats import write_tiff
+            for i, arr in enumerate(buffer):
+                write_tiff(f"{i:04d}.tiff", arr)
+                printer(f"{i} / {len(buffer)}")
+        if True:
+            x, y = buffer[0].shape
+            dtype = buffer[0].dtype
+            fn = f"scan_{t}.h5"
+            f = h5.File(fn)
+            d = f.create_dataset("STEM-diffraction", shape=(len(buffer), x, y), dtype=dtype)
+            for i, arr in enumerate(buffer):
+                printer(f"{i} / {len(buffer)}")
+                d[i] = arr
+            f.close()
+    
+            printer(f"Wrote buffer to {fn}\n")
     
         with open("scan_{}.txt".format(t), "w") as f:
             print(time.ctime(), file=f)

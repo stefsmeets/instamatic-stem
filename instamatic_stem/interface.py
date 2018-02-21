@@ -45,12 +45,12 @@ class BeamCtrlFrame(LabelFrame):
         Label(frame, text="Blocksize").grid(row=6, column=0, sticky="EW")
         Combobox(frame, width=10, textvariable=self.var_blocksize, values=blocksizes).grid(row=6, column=1, sticky="EW", padx=5, pady=2.5)
         
-        latencies = ["low", "high", 0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-        Label(frame, text="Stream latency (s)").grid(row=7, column=0, sticky="EW")
-        Combobox(frame, width=10, textvariable=self.var_stream_latency, values=latencies).grid(row=7, column=1, sticky="EW", padx=5, pady=2.5)
+        # latencies = ["low", "high", 0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        # Label(frame, text="Stream latency (s)").grid(row=7, column=0, sticky="EW")
+        # Combobox(frame, width=10, textvariable=self.var_stream_latency, values=latencies).grid(row=7, column=1, sticky="EW", padx=5, pady=2.5)
         
-        Label(frame, text="Hardware latency (s)").grid(row=8, column=0, sticky="EW")
-        Spinbox(frame, textvariable=self.var_hardware_latency, width=10, from_=-1.0, to=1.0, increment=0.05).grid(row=8, column=1, sticky="EW", padx=5, pady=2.5)
+        # Label(frame, text="Hardware latency (s)").grid(row=8, column=0, sticky="EW")
+        # Spinbox(frame, textvariable=self.var_hardware_latency, width=10, from_=-1.0, to=1.0, increment=0.05).grid(row=8, column=1, sticky="EW", padx=5, pady=2.5)
 
         self.make_entry(frame, self.var_exposure, "Exposure (s)", 9, 0, 0.01, 10.0, 0.01)
     
@@ -92,7 +92,7 @@ class BeamCtrlFrame(LabelFrame):
 
         self.var_dwell_time    = DoubleVar(value=0.05)
         self.var_dwell_time.trace_add("write", self.update_dwell_time)
-        self.var_blocksize     = IntVar(value=512)
+        self.var_blocksize     = IntVar(value=1024)
         self.var_blocksize.trace_add("write", self.update_dwell_time)
         self.var_actual_dwell_time = StringVar(value="")
         
