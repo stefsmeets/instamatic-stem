@@ -199,7 +199,7 @@ def plot_scan_grid(controller, **kwargs):
     plt.show()
 
 
-from .base_module import BaseModule
+from instamatic.gui.base_module import BaseModule
 
 module = BaseModule("scanning", "scanning", True, STEMFrame, commands={
  "scanning": acquire_data_scanning,

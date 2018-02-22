@@ -101,10 +101,11 @@ def beam_control(controller, **kwargs):
         controller.beam_ctrl.play()
 
 
-from .base_module import BaseModule
+from instamatic.gui.base_module import BaseModule
 
 module = BaseModule("beam", "beam", True, BeamTestFrame, commands={
- "beam_control": beam_control } )
+    "beam_control": beam_control
+} )
 
 
 if __name__ == '__main__':

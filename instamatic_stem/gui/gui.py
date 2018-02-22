@@ -12,11 +12,8 @@ import threading
 import queue
 
 import datetime
-from ..experiment import get_coords
 
 from instamatic.camera.videostream import VideoStream
-
-from collections import namedtuple
 from .modules import MODULES
 
 job_dict = {}
@@ -24,11 +21,12 @@ job_dict = {}
 
 class DataCollectionController(object):
     """docstring for DataCollectionController"""
-    def __init__(self, stream, beam_ctrl, log=None):
+    def __init__(self, tem_ctrl=None, stream=None, beam_ctrl=None, log=None):
         super(DataCollectionController, self).__init__()
+        self.ctrl = tem_ctrl
         self.stream = stream
-        self.camera = stream.cam.name
         self.beam_ctrl = beam_ctrl
+
         self.log = log
 
         self.q = queue.LifoQueue(maxsize=1)
@@ -73,7 +71,7 @@ class DataCollectionController(object):
                 self.log.debug("Error caught -> {} while running '{}' with {}".format(repr(e), job, kwargs))
                 self.log.exception(e)
 
- 
+
 class DataCollectionGUI(VideoStream):
     """docstring for DataCollectionGUI"""
     def __init__(self, *args, **kwargs):
@@ -167,7 +165,7 @@ def main():
     while not stream._modules_have_loaded:
         time.sleep(0.1)
 
-    gui = DataCollectionController(stream, beam_ctrl=beam_ctrl, log=log)
+    gui = DataCollectionController(tem_ctrl=None, stream=stream, beam_ctrl=beam_ctrl, log=log)
 
 
 if __name__ == '__main__':
