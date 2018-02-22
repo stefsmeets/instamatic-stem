@@ -16,20 +16,18 @@ class BeamTestFrame(LabelFrame):
         LabelFrame.__init__(self, parent, text="Set up a raster scan")
         self.parent = parent
 
-        self.beam_ctrl = None
-
         self.channels = settings["channels"]
         self.init_vars()
 
         frame = Frame(self)
 
-        Checkbutton(frame, text="Enable", variable=self.var_toggle_beam, command=self.toggle_beam).grid(row=5, column=0, sticky="W")
+        Checkbutton(frame, text="Enable", variable=self.var_toggle_stream, command=self.toggle_stream).grid(row=5, column=0, sticky="W")
         Button(frame, text="Reset", command=self.reset_channels).grid(row=5, column=1, sticky="W")
 
         for i, channel in enumerate(self.channels):
-            self.make_slider(frame, channel["var"], channel["name"], 10+i, -100, 100, self.update_channels)
+            self.make_slider(frame, channel["var"], channel["name"], 10+i, -100, 100, self.update_stream)
 
-        self.make_slider(frame, self.var_damping, "Strength", 101, 0, 100, self.update_channels)
+        self.make_slider(frame, self.var_damping, "Strength", 101, 0, 100, self.update_stream)
 
         frame.pack(side="top", fill="x", padx=10, pady=10)
         frame.columnconfigure(2, weight=1)
@@ -50,41 +48,36 @@ class BeamTestFrame(LabelFrame):
     def init_vars(self):
         for channel in self.channels:
             channel["var"] = DoubleVar(value=channel["default"])
-            channel["var"].trace_add("write", self.update_channels)
+            channel["var"].trace_add("write", self.update_stream)
 
         self.var_damping = DoubleVar(value=50.0)
-        self.var_damping.trace_add("write", self.update_channels)
+        self.var_damping.trace_add("write", self.update_stream)
 
-        self.var_toggle_beam   = BooleanVar(value=False)
+        self.var_toggle_stream   = BooleanVar(value=False)
 
     def reset_channels(self):
         for channel in self.channels:
             channel["var"].set(channel["default"])
-        self.update_channels()
+        self.update_stream()
 
-    def toggle_beam(self):
-        toggle = self.var_toggle_beam.get()
-
+    def toggle_stream(self):
+        toggle = self.var_toggle_stream.get()
         if toggle:
-            self.update_channels()
-            self.beam_ctrl.play()
+            self.update_stream(state="start")
         else:
-            self.beam_ctrl.stop()
+            self.update_stream(state="stop")
 
     def set_trigger(self, trigger=None, q=None):
         self.triggerEvent = trigger
         self.q = q
 
-    def update_channels(self, *args):
-        # print "\nupdated", time.clock()
-        try:
-            channel_data = self.get_channel_data()
-        except ValueError as e:
-            return
-        if self.beam_ctrl:
-            self.beam_ctrl.update(channel_data)
+    def update_stream(self, *args, state="continue"):
+        params = self.get_params()
+        params["state"] = state
+        self.q.put(("beam_control", params))
+        self.triggerEvent.set()
 
-    def get_channel_data(self):
+    def get_params(self):
         channel_data = []
         damping = self.var_damping.get() / (100.0 * global_damping_factor)
 
@@ -92,19 +85,12 @@ class BeamTestFrame(LabelFrame):
             val = channel["var"].get()
             channel_data.append(damping*val / 100.0)
 
-        return channel_data
-
-    def stop(self):
-        if self.var_toggle_beam.get():
-            self.var_toggle_beam.set(False)
-        self.beam_ctrl.stop()
+        return {"channel_data": channel_data}
 
 
 if __name__ == '__main__':
     from ..settings import default_settings as settings
 
-    beam = BeamCtrl(**settings)
-
     root = Tk()
-    BeamTestFrame(root, settings=settings, beam_ctrl=beam_ctrl).pack(side="top", fill="both", expand=True)
+    BeamTestFrame(root, settings=settings).pack(side="top", fill="both", expand=True)
     root.mainloop()

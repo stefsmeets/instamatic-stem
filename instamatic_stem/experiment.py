@@ -50,14 +50,14 @@ def signal_generator(coords, pre_fill=2, post_fill=5, repeat=10):
         yield False, [0, 0]
 
 
-def do_experiment(cam, strength,
+def do_experiment(cam, beam_ctrl,
+    strength,
     grid_x,
     grid_y,
     dwell_time,
     rotation,
     exposure,
-    beam_ctrl,
-    blocksize=512,
+    blocksize=1024,
     stream_latency=None,
     hardware_latency=0.0,
     expdir=None,

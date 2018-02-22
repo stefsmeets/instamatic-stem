@@ -36,11 +36,9 @@ class DataCollectionController(object):
         
         self.module_scanning = self.stream.get_module("scanning")
         self.module_scanning.set_trigger(trigger=self.triggerEvent, q=self.q)
-        self.module_scanning.beam_ctrl = beam_ctrl
 
         self.module_beam = self.stream.get_module("beam")
         self.module_beam.set_trigger(trigger=self.triggerEvent, q=self.q)
-        self.module_beam.beam_ctrl = beam_ctrl
 
         self.exitEvent = threading.Event()
         self.stream._atexit_funcs.append(self.exitEvent.set)
@@ -63,6 +61,10 @@ class DataCollectionController(object):
                     self.acquire_data_scanning(**kwargs)
                 elif job == "plot_scan_grid":
                     self.plot_scan_grid(**kwargs)
+                elif job == "do_box_scan":
+                    self.do_box_scan(**kwargs)
+                elif job == "beam_control":
+                    self.beam_control(**kwargs)
                 else:
                     print("Unknown job: {}".format(job))
                     print("Kwargs:\n{}".format(kwargs))
@@ -72,6 +74,8 @@ class DataCollectionController(object):
                 self.log.exception(e)
 
     def acquire_data_scanning(self, **kwargs):
+        self.beam_ctrl.stop()
+
         from ..experiment import do_experiment
 
         expdir = self.module_io.get_new_experiment_directory()
@@ -79,10 +83,33 @@ class DataCollectionController(object):
 
         kwargs["expdir"] = expdir
 
-        do_experiment(self.stream, **kwargs)
+        do_experiment(cam=self.stream, beam_ctrl=self.beam_ctrl, **kwargs)
         
         # from experiment import do_experiment_continuous
         # do_experiment_continuous(self.stream, **kwargs)
+
+    def do_box_scan(self, **kwargs):
+        state = kwargs.get("state")
+        if state == "stop":
+            self.beam_ctrl.stop()
+            return
+
+        grid_x = kwargs.get("grid_x")
+        grid_y = kwargs.get("grid_y")
+
+        coords = get_coords(**kwargs).reshape(grid_y, grid_x, 2)
+
+        corners = [
+        coords[ 0,  0],
+        coords[ 0, -1],
+        coords[-1, -1],
+        coords[-1,  0],
+        ]
+
+        self.beam_ctrl.do_box_scan(corners)
+
+        if state == "start":
+            self.beam_ctrl.play()
 
     def plot_scan_grid(self, **kwargs):
         import matplotlib.pyplot as plt
@@ -95,6 +122,18 @@ class DataCollectionController(object):
         plt.ylabel("Y axis")
         plt.axis('equal')
         plt.show()
+
+    def beam_control(self, **kwargs):
+        state = kwargs.get("state")
+        if state == "stop":
+            self.beam_ctrl.stop()
+            return
+
+        channel_data = kwargs.get("channel_data")
+        self.beam_ctrl.update(channel_data)
+
+        if state == "start":
+            self.beam_ctrl.play()
 
  
 class DataCollectionGUI(VideoStream):

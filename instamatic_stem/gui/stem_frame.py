@@ -2,8 +2,6 @@ from tkinter import *
 from tkinter.ttk import *
 from instamatic.utils.spinbox import Spinbox
 
-from ..beam_control import BeamCtrl
-
 from ..settings import default as default_settings
 from ..experiment import get_coords
 
@@ -15,8 +13,6 @@ class STEMFrame(LabelFrame):
     def __init__(self, parent, settings=default_settings):
         LabelFrame.__init__(self, parent, text="Set up a raster scan")
         self.parent = parent
-
-        self.beam_ctrl = None
 
         self.channels = settings["channels"]
         self.init_vars()
@@ -115,42 +111,23 @@ class STEMFrame(LabelFrame):
                    "grid_y": self.var_grid_y.get(),
                    "strength": self.var_strength.get() / (100.0 * global_damping_factor),
                    "rotation": self.var_rotation.get(),
-                   "exposure": self.var_exposure.get(),
-                   "beam_ctrl": self.beam_ctrl }
+                   "exposure": self.var_exposure.get() }
         return params
 
     def toggle_test_scanning(self, *args):
         toggle = self.var_toggle_test.get()
         if toggle:
-            self.update_test_stream()
-            self.beam_ctrl.play()
+            self.update_test_stream(state="start")
         else:
-            self.beam_ctrl.stop()
+            self.update_test_stream(state="stop")
 
-    def stop(self):
-        if self.var_toggle_test.get():
-            self.var_toggle_test.set(False)
-        self.beam_ctrl.stop()
-
-    def update_test_stream(self, *args):
-        if self.var_toggle_test.get():
-            params = self.get_scanning_params()
-            
-            grid_x = params["grid_x"]
-            grid_y = params["grid_y"]
-            coords = get_coords(**params).reshape(grid_y, grid_x, 2)
-
-            corners = [
-            coords[ 0,  0],
-            coords[ 0, -1],
-            coords[-1, -1],
-            coords[-1,  0],
-            ]
-
-            self.beam_ctrl.do_box_scan(corners)
+    def update_test_stream(self, *args, state="continue"):
+        params = self.get_scanning_params()
+        params["state"] = state
+        self.q.put(("do_box_scan", params))
+        self.triggerEvent.set()
 
     def start_scanning(self, *args):
-        self.stop()
         params = self.get_scanning_params()
         self.q.put(("scanning", params))
         self.triggerEvent.set()
@@ -164,7 +141,6 @@ class STEMFrame(LabelFrame):
         import yaml
         from pathlib import Path
         params = self.get_scanning_params()
-        params.pop("beam_ctrl")
         outfile = "input.yaml"
         yaml.dump(params, stream=open(outfile, "w"), default_flow_style=False)
         print(f"Wrote file: {Path(outfile).absolute()}")
@@ -173,8 +149,6 @@ class STEMFrame(LabelFrame):
 if __name__ == '__main__':
     from ..settings import default_settings as settings
 
-    beam = BeamCtrl(**settings)
-
     root = Tk()
-    BeamCtrlFrame(root, settings=settings, beam_ctrl=beam_ctrl).pack(side="top", fill="both", expand=True)
+    BeamCtrlFrame(root, settings=settings).pack(side="top", fill="both", expand=True)
     root.mainloop()
