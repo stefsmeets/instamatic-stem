@@ -146,6 +146,67 @@ class STEMFrame(LabelFrame):
         print(f"Wrote file: {Path(outfile).absolute()}")
 
 
+def acquire_data_scanning(controller, **kwargs):
+    controller.beam_ctrl.stop()
+
+    from ..experiment import do_experiment
+
+    expdir = controller.module_io.get_new_experiment_directory()
+    expdir.mkdir(exist_ok=True, parents=True)
+
+    kwargs["expdir"] = expdir
+
+    do_experiment(cam=controller.stream, beam_ctrl=controller.beam_ctrl, **kwargs)
+    
+    # from experiment import do_experiment_continuous
+    # do_experiment_continuous(controller.stream, **kwargs)
+
+
+def do_box_scan(controller, **kwargs):
+    state = kwargs.get("state")
+    if state == "stop":
+        controller.beam_ctrl.stop()
+        return
+
+    grid_x = kwargs.get("grid_x")
+    grid_y = kwargs.get("grid_y")
+
+    coords = get_coords(**kwargs).reshape(grid_y, grid_x, 2)
+
+    corners = [
+    coords[ 0,  0],
+    coords[ 0, -1],
+    coords[-1, -1],
+    coords[-1,  0],
+    ]
+
+    controller.beam_ctrl.do_box_scan(corners)
+
+    if state == "start":
+        controller.beam_ctrl.play()
+
+
+def plot_scan_grid(controller, **kwargs):
+    import matplotlib.pyplot as plt
+
+    coords = get_coords(**kwargs)
+
+    plt.scatter(*coords.T)
+    plt.title("Coordinates for grid scan")
+    plt.xlabel("X axis")
+    plt.ylabel("Y axis")
+    plt.axis('equal')
+    plt.show()
+
+
+from .base_module import BaseModule
+
+module = BaseModule("scanning", "scanning", True, STEMFrame, commands={
+ "scanning": acquire_data_scanning,
+ "plot_scan_grid": plot_scan_grid,
+ "do_box_scan": do_box_scan} )
+
+
 if __name__ == '__main__':
     from ..settings import default_settings as settings
 

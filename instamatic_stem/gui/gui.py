@@ -19,6 +19,8 @@ from instamatic.camera.videostream import VideoStream
 from collections import namedtuple
 from .modules import MODULES
 
+job_dict = {}
+
 
 class DataCollectionController(object):
     """docstring for DataCollectionController"""
@@ -33,13 +35,13 @@ class DataCollectionController(object):
         self.triggerEvent = threading.Event()
         
         self.module_io = self.stream.get_module("io")
+
+        for name, module in self.stream.modules.items():
+            try:
+                module.set_trigger(trigger=self.triggerEvent, q=self.q)
+            except AttributeError:
+                pass  # module does not need/accept a trigger
         
-        self.module_scanning = self.stream.get_module("scanning")
-        self.module_scanning.set_trigger(trigger=self.triggerEvent, q=self.q)
-
-        self.module_beam = self.stream.get_module("beam")
-        self.module_beam.set_trigger(trigger=self.triggerEvent, q=self.q)
-
         self.exitEvent = threading.Event()
         self.stream._atexit_funcs.append(self.exitEvent.set)
         self.stream._atexit_funcs.append(self.triggerEvent.set)
@@ -56,84 +58,20 @@ class DataCollectionController(object):
                 sys.exit()
 
             job, kwargs = self.q.get()
+
             try:
-                if job == "scanning":
-                    self.acquire_data_scanning(**kwargs)
-                elif job == "plot_scan_grid":
-                    self.plot_scan_grid(**kwargs)
-                elif job == "do_box_scan":
-                    self.do_box_scan(**kwargs)
-                elif job == "beam_control":
-                    self.beam_control(**kwargs)
-                else:
-                    print("Unknown job: {}".format(job))
-                    print("Kwargs:\n{}".format(kwargs))
+                func = job_dict[job]
+            except KeyError:
+                print("Unknown job: {}".format(job))
+                print("Kwargs:\n{}".format(kwargs))
+                continue
+
+            try:
+                func(self, **kwargs)
             except Exception as e:
                 traceback.print_exc()
                 self.log.debug("Error caught -> {} while running '{}' with {}".format(repr(e), job, kwargs))
                 self.log.exception(e)
-
-    def acquire_data_scanning(self, **kwargs):
-        self.beam_ctrl.stop()
-
-        from ..experiment import do_experiment
-
-        expdir = self.module_io.get_new_experiment_directory()
-        expdir.mkdir(exist_ok=True, parents=True)
-
-        kwargs["expdir"] = expdir
-
-        do_experiment(cam=self.stream, beam_ctrl=self.beam_ctrl, **kwargs)
-        
-        # from experiment import do_experiment_continuous
-        # do_experiment_continuous(self.stream, **kwargs)
-
-    def do_box_scan(self, **kwargs):
-        state = kwargs.get("state")
-        if state == "stop":
-            self.beam_ctrl.stop()
-            return
-
-        grid_x = kwargs.get("grid_x")
-        grid_y = kwargs.get("grid_y")
-
-        coords = get_coords(**kwargs).reshape(grid_y, grid_x, 2)
-
-        corners = [
-        coords[ 0,  0],
-        coords[ 0, -1],
-        coords[-1, -1],
-        coords[-1,  0],
-        ]
-
-        self.beam_ctrl.do_box_scan(corners)
-
-        if state == "start":
-            self.beam_ctrl.play()
-
-    def plot_scan_grid(self, **kwargs):
-        import matplotlib.pyplot as plt
-
-        coords = get_coords(**kwargs)
-
-        plt.scatter(*coords.T)
-        plt.title("Coordinates for grid scan")
-        plt.xlabel("X axis")
-        plt.ylabel("Y axis")
-        plt.axis('equal')
-        plt.show()
-
-    def beam_control(self, **kwargs):
-        state = kwargs.get("state")
-        if state == "stop":
-            self.beam_ctrl.stop()
-            return
-
-        channel_data = kwargs.get("channel_data")
-        self.beam_ctrl.update(channel_data)
-
-        if state == "start":
-            self.beam_ctrl.play()
 
  
 class DataCollectionGUI(VideoStream):
@@ -162,6 +100,7 @@ class DataCollectionGUI(VideoStream):
                 module_frame = module.tk_frame(frame)
                 module_frame.pack(side="top", fill="both", expand="yes", padx=10, pady=10)
                 self.modules[module.name] = module_frame
+            job_dict.update(module.commands)
 
         if make_notebook:
             self.nb.pack(fill="both", expand="yes")
@@ -176,13 +115,14 @@ class DataCollectionGUI(VideoStream):
         return self.modules[module]
 
     def saveImage(self):
-        # module_io = self.get_module("io")
+        module_io = self.get_module("io")
 
-        # drc = module_io.get_experiment_directory()
-        # if not os.path.exists(drc):
-            # os.makedirs(drc)
-        outfile = datetime.datetime.now().strftime("%Y%m%d-%H%M%S.%f") + ".tiff"
-        # outfile = os.path.join(drc, outfile)
+        drc = module_io.get_experiment_directory()
+        drc.mkdir(exist_ok=True, parents=True)
+
+        if not os.path.exists(drc):
+            os.makedirs(drc)
+        outfile = drc / datetime.datetime.now().strftime("%Y%m%d-%H%M%S.%f") + ".tiff"
 
         try:
             from instamatic.processing.flatfield import apply_flatfield_correction

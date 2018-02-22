@@ -88,6 +88,25 @@ class BeamTestFrame(LabelFrame):
         return {"channel_data": channel_data}
 
 
+def beam_control(controller, **kwargs):
+    state = kwargs.get("state")
+    if state == "stop":
+        controller.beam_ctrl.stop()
+        return
+
+    channel_data = kwargs.get("channel_data")
+    controller.beam_ctrl.update(channel_data)
+
+    if state == "start":
+        controller.beam_ctrl.play()
+
+
+from .base_module import BaseModule
+
+module = BaseModule("beam", "beam", True, BeamTestFrame, commands={
+ "beam_control": beam_control } )
+
+
 if __name__ == '__main__':
     from ..settings import default_settings as settings
 

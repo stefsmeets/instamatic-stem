@@ -1,12 +1,11 @@
 from instamatic.gui.io_frame import *
-from .stem_frame import *
-from .beam_test_frame import *
+from . import stem_frame
+from . import beam_test_frame
 
-from collections import namedtuple
-
-Module = namedtuple('Module', ['name', 'display_name', 'tabbed', 'tk_frame'])
+from .base_module import BaseModule
 
 MODULES = (
-Module("io", "i/o", False, IOFrame),
-Module("scanning", "scanning", True, STEMFrame),
-Module("beam", "beam", True, BeamTestFrame) )
+BaseModule("io", "i/o", False, IOFrame, {}),
+stem_frame.module,
+beam_test_frame.module )
+
