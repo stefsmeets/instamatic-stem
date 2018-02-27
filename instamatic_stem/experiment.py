@@ -263,8 +263,17 @@ def do_experiment(cam, beam_ctrl,
         for i, arr in enumerate(buffer):
             im_view[i] = arr.sum()
 
+        h = {
+            "scan_strength": strength,
+            "scan_grid_x": grid_x,
+            "scan_grid_y": grid_y,
+            "scan_dwell_time": dwell_time,
+            "scan_rotation": rotation,
+            "scan_exposure": exposure,
+        }
+
         image_fn = expdir / "image.tiff"
-        write_tiff(expdir / image_fn, im)
+        write_tiff(expdir / image_fn, im, header=h)
         print(f"Wrote image to {image_fn}")
 
         with open(expdir / "scan_log.txt", "w") as f:
