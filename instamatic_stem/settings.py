@@ -15,12 +15,12 @@ all_asio = {**asio_base,
    'channels': (
       {"name": "BeamShift X", "var": None, "default": 0},
       {"name": "BeamShift Y", "var": None, "default": 0},
-      {"name": "BeamTilt X?", "var": None, "default": 0},
-      {"name": "BeamTilt Y?", "var": None, "default": 0},
-      {"name": "ImageShift? X", "var": None, "default": 0},
-      {"name": "ImageShift? Y", "var": None, "default": 0},
-      {"name": "ImageTilt? X?", "var": None, "default": 0},
-      {"name": "ImageTilt? Y?", "var": None, "default": 0})
+      {"name": "BeamTilt X", "var": None, "default": 0},
+      {"name": "BeamTilt Y", "var": None, "default": 0},
+      {"name": "ImageShift 1 X", "var": None, "default": 0},
+      {"name": "ImageShift 1 Y", "var": None, "default": 0},
+      {"name": "ImageShift 2 X", "var": None, "default": 0},
+      {"name": "ImageShift 2 Y", "var": None, "default": 0})
 }}
 
 cla1_adat_base = {
@@ -66,7 +66,7 @@ testing = {
 }
 
 # default = testing
-#default = all_asio
+# default = all_asio
 default = cla1_asio
 # default = cla1_mme
 # default = cla1_ds

@@ -10,16 +10,20 @@ from .modules import MODULES
 
 
 def main():
-    import psutil, os
+    from instamatic.utils import high_precision_timers
+    high_precision_timers.enable()  # sleep timers with 1 ms resolution
+    
+    # enable faster switching between threads
+    sys.setswitchinterval(0.001)  # seconds
+
+    import psutil
     p = psutil.Process(os.getpid())
     p.nice(psutil.REALTIME_PRIORITY_CLASS)  # set python process as high priority
 
-    from os.path import dirname as up
-    
-    logging_dir = up(up(up(__file__)))
+    from instamatic import config
 
     date = datetime.datetime.now().strftime("%Y-%m-%d")
-    logfile = os.path.join(logging_dir, "logs", "scanning_{}.log".format(date))
+    logfile = config.logs_drc / f"instamatic_{date}.log"
 
     logging.basicConfig(format="%(asctime)s | %(module)s:%(lineno)s | %(levelname)s | %(message)s", 
                         filename=logfile, 
@@ -27,7 +31,7 @@ def main():
 
     logging.captureWarnings(True)
     log = logging.getLogger(__name__)
-    log.info("Scanning.gui started")
+    log.info("Instamatic-stem.gui started")
 
     # Work-around for race condition (errors) that occurs when 
     # DataCollectionController tries to access them
@@ -38,7 +42,6 @@ def main():
 
     from instamatic.gui.gui import DataCollectionController, DataCollectionGUI
 
-    from instamatic import config
     stream = DataCollectionGUI(cam=config.cfg.camera, modules=MODULES)
 
     while not stream._modules_have_loaded:

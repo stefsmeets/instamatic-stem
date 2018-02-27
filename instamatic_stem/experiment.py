@@ -162,10 +162,6 @@ def do_experiment(cam, beam_ctrl,
 
     if gui:
         cam.block()
-        sw_interval = sys.getswitchinterval()
-        # Lower switch interval for faster switching of threads
-        # This significantly reduces 'missed frames'
-        sys.setswitchinterval(0.001)
 
     with stream:
         start_time = stream.time
@@ -224,7 +220,6 @@ def do_experiment(cam, beam_ctrl,
 
     if gui:
         cam.unblock()
-        sys.setswitchinterval(sw_interval)
 
     ntot = len(coords)
     nmissed = len(missed)
