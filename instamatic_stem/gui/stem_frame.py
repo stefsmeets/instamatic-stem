@@ -41,6 +41,8 @@ class STEMFrame(LabelFrame):
         self.make_entry(frame, self.var_grid_x, "Grid x", 30, 0, 2, 100, 1)
         self.make_entry(frame, self.var_grid_y, "Grid y", 30, 2, 2, 100, 1)
 
+        Checkbutton(frame, text="Shuffle coordinates", variable=self.var_shuffle_coordinates).grid(row=31, column=0, sticky="EW")
+
         Checkbutton(frame, text="Show perimeter", variable=self.var_toggle_test, command=self.toggle_test_scanning).grid(row=40, column=0, sticky="EW")
         Button(frame, text="Plot coords", command=self.show_grid_plot).grid(row=40, column=1, sticky="EW", padx=5, pady=2.5)
         Button(frame, text="Save variables", command=self.to_yaml).grid(row=40, column=2, sticky="EW", padx=5, pady=2.5)
@@ -70,6 +72,8 @@ class STEMFrame(LabelFrame):
         
         self.var_stream_latency   = StringVar(value="low")
         self.var_hardware_latency = DoubleVar(value=0.0)
+
+        self.var_shuffle_coordinates = BooleanVar(value=False)
 
         self.var_exposure      = DoubleVar(value=0.01)
         self.var_grid_x        = IntVar(value=10)
@@ -107,6 +111,7 @@ class STEMFrame(LabelFrame):
                    "blocksize": self.var_blocksize.get(),
                    "stream_latency": self.var_stream_latency.get(),
                    "hardware_latency": self.var_hardware_latency.get(),
+                   "shuffle_coords": self.var_shuffle_coordinates.get(),
                    "grid_x": self.var_grid_x.get(),
                    "grid_y": self.var_grid_y.get(),
                    "strength": self.var_strength.get() / (100.0 * global_damping_factor),

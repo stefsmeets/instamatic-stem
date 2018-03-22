@@ -57,6 +57,7 @@ def do_experiment(cam, beam_ctrl,
     dwell_time,
     rotation,
     exposure,
+    shuffle_coords=False,
     blocksize=1024,
     stream_latency=None,
     hardware_latency=0.0,
@@ -145,6 +146,11 @@ def do_experiment(cam, beam_ctrl,
             prime_output_buffers_using_stream_callback=True)
 
     coords = get_coords(grid_x, grid_y, strength, rotation)
+
+    if shuffle_coords:
+        permutation = np.random.permutation(len(coords))
+        coords = coords[permutation]
+
     gen_coords = signal_generator(coords, repeat=nblocks)
 
     queue = deque()
@@ -236,12 +242,20 @@ def do_experiment(cam, beam_ctrl,
     
     if not expdir:
         expdir = Path.cwd()
+        
     write_output = True
     write_to_hdf5 = True
     write_to_tiff = False
+
+    if shuffle_coords:
+        idx = np.argsort(permutation)
+    else:
+        idx = np.arange(len(buffer))
+
     if write_output:
         if write_to_tiff:
-            for i, arr in enumerate(buffer):
+            for i in idx:
+                arr = buffer[i]
                 write_tiff(expdir / f"{i:04d}.tiff", arr)
                 printer(f"{i} / {len(buffer)}")
         
@@ -251,7 +265,8 @@ def do_experiment(cam, beam_ctrl,
             fn = expdir / f"data.h5"
             f = h5.File(fn)
             d = f.create_dataset("STEM-diffraction", shape=(len(buffer), x, y), dtype=dtype)
-            for i, arr in enumerate(buffer):
+            for i in idx:
+                arr = buffer[i]
                 printer(f"{i} / {len(buffer)}")
                 d[i] = arr
             f.close()
@@ -260,7 +275,8 @@ def do_experiment(cam, beam_ctrl,
 
         im = np.zeros((grid_x, grid_y))
         im_view = im.ravel()
-        for i, arr in enumerate(buffer):
+        for i in idx:
+            arr = buffer[i]
             im_view[i] = arr.sum()
 
         h = {
