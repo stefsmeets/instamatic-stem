@@ -1,3 +1,6 @@
+from tkinter import *
+from tkinter.ttk import *
+
 import os, sys
 from instamatic.formats import *
 
@@ -6,6 +9,7 @@ import logging
 
 import datetime
 
+from instamatic.camera.videostream import VideoStream
 from .modules import MODULES
 
 
@@ -36,18 +40,23 @@ def main():
     # Work-around for race condition (errors) that occurs when 
     # DataCollectionController tries to access them
 
+    from instamatic.gui.gui import MainFrame, DataCollectionController
+    from instamatic.camera import camera
+
+    stream = camera.Camera(config.cfg.camera, as_stream=True)
+
+    root = Tk()
+    
+    gui = MainFrame(root, stream=stream, modules=MODULES)
+
     from ..settings import default as settings
     from ..beam_control import BeamCtrl
     beam_ctrl = BeamCtrl(**settings)
 
-    from instamatic.gui.gui import DataCollectionController, DataCollectionGUI
+    experiment_ctrl = DataCollectionController(ctrl=None, stream=stream, beam_ctrl=beam_ctrl, app=gui.app, log=log)
+    experiment_ctrl.start()
 
-    stream = DataCollectionGUI(cam=config.cfg.camera, modules=MODULES)
-
-    while not stream._modules_have_loaded:
-        time.sleep(0.1)
-
-    gui = DataCollectionController(tem_ctrl=None, stream=stream, beam_ctrl=beam_ctrl, log=log)
+    root.mainloop()
 
 
 if __name__ == '__main__':
