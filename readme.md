@@ -13,7 +13,7 @@ Start the gui by typing `instamatic.stem` in the command line.
  - matplotlib
  - numpy
 
-    pip install -r requirements.txt
+`pip install -r requirements.txt`
 
 ## Installation
 
