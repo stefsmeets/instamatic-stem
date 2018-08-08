@@ -13,7 +13,7 @@ global_damping_factor = 100
 class BeamTestFrame(LabelFrame):
     """docstring for BeamCtrlFrame"""
     def __init__(self, parent, settings=default_settings):
-        LabelFrame.__init__(self, parent, text="Set up a raster scan")
+        LabelFrame.__init__(self, parent, text="Beam control")
         self.parent = parent
 
         self.channels = settings["channels"]

@@ -1,14 +1,14 @@
 # Instamatic-STEM
 
-STEM module for instamatic.
+STEM diffraction module for [instamatic](https://github.com/stefsmeets/instamatic). Interfaces with the Nanomegas Digiscan and synchronizes the beam position with the Timepix camera at a maximum framerate of ~70 fps.
 
 ## Usage
 
-Start the gui by typing `instamatic-stem` in the command line.
+Start the gui by typing `instamatic.stem` in the command line.
 
 ## Requirements
 
-- Python3.6
+ - Python3.6
  - sounddevice
  - matplotlib
  - numpy
@@ -17,6 +17,6 @@ Start the gui by typing `instamatic-stem` in the command line.
 
 ## Installation
 
-Alternatively, the latest development version can always be installed via:
+The latest development version can always be installed via:
     
     pip install https://github.com/stefsmeets/instamatic-stem/archive/master.zip
