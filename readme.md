@@ -15,7 +15,7 @@ The signal itself is constructed as a 16-bit waveform, essentially a stream of f
 
 ### Maintainance
 
-This was a small project to better understand how the beam deflectors work. I no longer have access to the equipment and therefore no longer able to maintain/test this code.
+This was a small project to better understand how the beam deflectors work. I no longer have access to the equipment and therefore I am no longer able to maintain/test this code.
 
 ## Usage
 
