@@ -43,17 +43,17 @@ def main():
     from instamatic.gui.gui import MainFrame, DataCollectionController
     from instamatic.camera import camera
 
-    stream = camera.Camera(config.cfg.camera, as_stream=True)
+    cam = camera.Camera(config.cfg.camera, as_stream=True)
 
     root = Tk()
     
-    gui = MainFrame(root, stream=stream, modules=MODULES)
+    gui = MainFrame(root, cam=cam, modules=MODULES)
 
     from ..settings import default as settings
     from ..beam_control import BeamCtrl
     beam_ctrl = BeamCtrl(**settings)
 
-    experiment_ctrl = DataCollectionController(ctrl=None, stream=stream, beam_ctrl=beam_ctrl, app=gui.app, log=log)
+    experiment_ctrl = DataCollectionController(ctrl=None, stream=cam, beam_ctrl=beam_ctrl, app=gui.app, log=log)
     experiment_ctrl.start()
 
     root.mainloop()
