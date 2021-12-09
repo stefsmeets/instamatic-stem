@@ -23,13 +23,12 @@ setup(
 
     author=__author__,
     author_email=__author_email__,
-    license=__license__,
     url=__url__,
 
     classifiers=[
         'Programming Language :: Python :: 3.6',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'License :: OSI Approved :: MIT License',
         'Operating System :: Microsoft :: Windows',
         'Topic :: Scientific/Engineering :: Human Machine Interfaces',
         'Topic :: Scientific/Engineering :: Chemistry',
